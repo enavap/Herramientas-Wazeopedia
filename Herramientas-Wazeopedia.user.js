@@ -1,20 +1,29 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      3.1.6
+// @version      5.0.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
-// @require      https://update.greasyfork.org/scripts/538615/1603316/Wazeopedia%20Blocks-Library.js
 // @require      https://update.greasyfork.org/scripts/538610/1603321/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538615/1603316/Wazeopedia%20Blocks-Library.js
 // @grant        GM_info
 // @license      MIT
+// @downloadURL  https://update.greasyfork.org/scripts/YOUR_MAIN_SCRIPT_ID/Herramientas%20Wazeopedia.user.js
+// @updateURL    https://update.greasyfork.org/scripts/YOUR_MAIN_SCRIPT_ID/Herramientas%20Wazeopedia.meta.js
 // ==/UserScript==
-
-// NOTA: Recuerda actualizar los números de versión en las URLs @require cuando publiques las bibliotecas.
 
 (function() {
     'use strict';
+
+    // Mecanismo de seguridad: Esperar a que las bibliotecas estén cargadas.
+    // Esto previene errores si el script se ejecuta antes de que los @require terminen.
+    if (typeof WazeopediaUI === 'undefined' || typeof window.WazeopediaBlocks === 'undefined') {
+        console.error("FATAL: El script principal de Herramientas Wazeopedia no puede iniciarse. Faltan bibliotecas.");
+        // Opcional: reintentar tras un breve lapso
+        setTimeout(arguments.callee, 100);
+        return;
+    }
 
     // --- ESTRUCTURA DE DATOS PARA PLANTILLAS DE TOC ---
     const tocTemplates = {
@@ -40,19 +49,19 @@
         }
     };
 
+
     // --- CONFIGURACIÓN DE BOTONES (usa funciones de las bibliotecas) ---
     const buttonConfigs = [{
             id: 'wz-btn-toc',
             text: 'TOC',
             title: 'Mostrar guía de Tabla de Contenidos',
-            // Se usa una función flecha para pasar los datos de las plantillas a la función de la biblioteca
             action: () => WazeopediaUI.showTocGuideModal(tocTemplates)
         },
         {
             id: 'wz-btn-hr',
             text: '---',
             title: 'Insertar línea horizontal',
-            action: WazeopediaUI.applyHrFormatting // Llama directamente a la función de la biblioteca
+            action: WazeopediaUI.applyHrFormatting
         },
         {
             id: 'wz-btn-headings',
@@ -74,38 +83,26 @@
             title: 'Insertar bloques de contenido comunes',
             isDropdown: true,
             dropdownItems: [
-                { text: '👑 Título y Estado', title: 'Insertar/Editar bloque de Título y Estado', action: WazeopediaBlocks.showTitleConfigModal },
-                { text: '📰 Introducción', title: 'Insertar/Editar bloque de Introducción', action: WazeopediaBlocks.showIntroductionConfigModal },
-                { text: '📜 Biografía', title: 'Insertar/Editar bloque de Biografía y Enlaces', action: WazeopediaBlocks.showBiographyConfigModal },
-                { text: '💬 Foro Discusión', title: 'Insertar/Actualizar bloque de Foro de Discusión', action: WazeopediaBlocks.applyForumDiscussionFormatting },
+                { text: '👑 Título y Estado', title: 'Insertar/Editar bloque de Título y Estado', action: window.WazeopediaBlocks.showTitleConfigModal },
+                { text: '📰 Introducción', title: 'Insertar/Editar bloque de Introducción', action: window.WazeopediaBlocks.showIntroductionConfigModal },
+                { text: '📜 Biografía', title: 'Insertar/Editar bloque de Biografía y Enlaces', action: window.WazeopediaBlocks.showBiographyConfigModal },
+                { text: '💬 Foro Discusión', title: 'Insertar/Actualizar bloque de Foro de Discusión', action: window.WazeopediaBlocks.applyForumDiscussionFormatting },
                 { isSeparator: true },
-                { text: '❔ FAQs', title: 'Insertar/Editar bloque de Preguntas Frecuentes', action: WazeopediaBlocks.showFaqConfigModal }
+                { text: '❔ FAQs', title: 'Insertar/Editar bloque de Preguntas Frecuentes', action: window.WazeopediaBlocks.showFaqConfigModal }
             ]
         }
     ];
 
     // --- MONTAJE E INICIALIZACIÓN ---
-
     function addCustomButtons() {
-        if (typeof WazeopediaUI === 'undefined' || typeof WazeopediaBlocks === 'undefined') {
-            console.error("Herramientas Wazeopedia: Una o más bibliotecas no se cargaron correctamente.");
-            return;
-        }
-
         const editorToolbar = document.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar, .editor-toolbar');
-        if (!editorToolbar) return;
-        let buttonBarContainer = editorToolbar.querySelector('.wz-button-container');
-        if (buttonBarContainer && buttonBarContainer.dataset.wzToolsProcessed === 'true') return;
+        if (!editorToolbar || editorToolbar.querySelector('.wz-button-container')) return;
 
-        if (!buttonBarContainer) {
-            buttonBarContainer = document.createElement('div');
-            buttonBarContainer.className = 'wz-button-container';
-            const lastGroup = Array.from(editorToolbar.children).filter(el => el.matches('.btn-group, button')).pop();
-            if (lastGroup) lastGroup.insertAdjacentElement('afterend', buttonBarContainer); else editorToolbar.appendChild(buttonBarContainer);
-        }
-        buttonBarContainer.innerHTML = '';
-        buttonBarContainer.dataset.wzToolsProcessed = 'true';
-
+        let buttonBarContainer = document.createElement('div');
+        buttonBarContainer.className = 'wz-button-container';
+        const lastGroup = Array.from(editorToolbar.children).filter(el => el.matches('.btn-group, button')).pop();
+        if (lastGroup) lastGroup.insertAdjacentElement('afterend', buttonBarContainer); else editorToolbar.appendChild(buttonBarContainer);
+        
         const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
         if (!textarea) return;
 
@@ -127,7 +124,7 @@
                     } else {
                         const ddBtn = WazeopediaUI.createButton(item.text, '', e => {
                             e.stopPropagation();
-                            if (typeof item.action === 'function') { item.action(textarea); }
+                            if (typeof item.action === 'function') item.action(textarea);
                             WazeopediaUI.closeAllDropdowns();
                         });
                         ddBtn.title = item.title || `Insertar ${item.text}`;
@@ -139,7 +136,7 @@
             } else {
                 const btn = WazeopediaUI.createButton(config.text, 'wz-custom-button btn', e => {
                     e.preventDefault(); e.stopPropagation();
-                    if (typeof config.action === 'function') { config.action(textarea); }
+                    if (typeof config.action === 'function') config.action(textarea);
                 });
                 btn.id = config.id;
                 btn.title = config.title;
@@ -153,12 +150,7 @@
         document.body.classList.toggle('wz-dark-mode', isDark);
     }
 
-    const editorObserver = new MutationObserver(() => {
-        if (document.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar, .editor-toolbar') && !document.getElementById('wz-btn-toc')) {
-            addCustomButtons();
-            applyTheme();
-        }
-    });
+    const editorObserver = new MutationObserver(addCustomButtons);
 
     // Iniciar el script
     editorObserver.observe(document.body, { childList: true, subtree: true });

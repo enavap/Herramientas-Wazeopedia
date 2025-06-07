@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
 // @description  Biblioteca de funciones de UI y utilidades para scripts de Wazeopedia.
-// @author       Annthizze
+// @author       Annthizze & Gemini
 // @match        https://www.waze.com/discuss/*
 // @license      MIT
 // ==/UserScript==
@@ -75,6 +75,43 @@ var WazeopediaUI = (function() {
         }
         textarea.focus();
         textarea.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    }
+    
+    function ensureProperSpacing(currentText, newBlockText, position, relativeBlockData) {
+        let before = "", after = "", middle = newBlockText;
+        const twoNewlines = "\n\n";
+        switch (position) {
+            case 'start':
+                before = ""; after = currentText;
+                if (after.trim().length > 0 && !middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); }
+                else if (after.trim().length > 0 && middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; }
+                break;
+            case 'end':
+                before = currentText; after = "";
+                if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && !before.endsWith("\n")) { middle = (before.endsWith("\n") ? "\n" : twoNewlines) + middle; }
+                else if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && before.endsWith("\n") && !before.endsWith(twoNewlines) ){ middle = "\n" + middle; }
+                break;
+            case 'afterRelative':
+                if (!relativeBlockData) return ensureProperSpacing(currentText, newBlockText, 'start');
+                before = currentText.substring(0, relativeBlockData.endIndex);
+                after = currentText.substring(relativeBlockData.endIndex);
+                if (!before.endsWith(twoNewlines) && !before.endsWith("\n")) middle = twoNewlines + middle;
+                else if (before.endsWith("\n") && !before.endsWith(twoNewlines) && !middle.startsWith("\n")) middle = "\n" + middle;
+                if (after.trim().length > 0 && !middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); }
+                else if (after.trim().length > 0 && middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; }
+                break;
+            case 'beforeRelative':
+                 if (!relativeBlockData) return ensureProperSpacing(currentText, newBlockText, 'end');
+                 before = currentText.substring(0, relativeBlockData.startIndex);
+                 after = currentText.substring(relativeBlockData.startIndex);
+                 if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && !before.endsWith("\n")) { middle = (before.endsWith("\n") ? "\n" : twoNewlines) + middle; }
+                 else if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && before.endsWith("\n") && !before.endsWith(twoNewlines) ){ middle = "\n" + middle; }
+                 if (!middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); }
+                 else if (middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; }
+                 break;
+            default: return { textToInsert: newBlockText.trim(), cursorPosition: newBlockText.trim().length };
+        }
+        return { textToInsert: before + middle + after, cursorPosition: (before + middle).length };
     }
 
     function applyHeadingFormatting(textarea, level, text = '') {
@@ -198,7 +235,7 @@ var WazeopediaUI = (function() {
         insertTextAtCursor,
         applyHeadingFormatting,
         applyHrFormatting,
+        ensureProperSpacing,
         init
     };
 })();
-

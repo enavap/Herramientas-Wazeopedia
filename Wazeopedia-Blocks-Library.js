@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Wazeopedia Blocks Library
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Biblioteca con la lógica para los bloques de contenido de Wazeopedia.
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
 // @license      MIT
-// @require      https://update.greasyfork.org/scripts/538610/1602961/Wazeopedia%20Core%20UI%20Library.js
+// @require      // @require https://update.greasyfork.org/scripts/538610/1603073/Wazeopedia%20Core%20UI%20Library.js
 // ==/UserScript==
 
 var WazeopediaBlocks = (function() {
@@ -51,121 +51,18 @@ var WazeopediaBlocks = (function() {
     const FORUM_BLOCK_IMAGE = "[center]![image|128x128, 50%](upload://2cmYNNfUCAykbh8vW92usPC9Sf3.png)[/center]";
     const FORUM_BLOCK_REGEX_STR = `(?:^|\n)---\s*\n+${FORUM_BLOCK_IMAGE.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}` + `\\s*${FORUM_BLOCK_IDENTIFIER.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}` + `[\\s\\S]*?` + `href="https://www\\.waze\\.com/discuss/new-topic\\?category=spain-usuarios-y-editores/wazeopedia-es/4779[^"]*">→aquí←</a>`;
     const BIO_BLOCK_IMAGE_AND_HEADER = "[center][wzh=0]![image|128x128, 50%](upload://UTuWTJ1XEX6BVzoj1FIhLjAb6i.png)[/wzh][/center]\n\n# [wzh=1]Biografía y Enlaces[/wzh]";
-    const BIO_BLOCK_REGEX = /(?:^|\n)---\s*\n+\[center\]\[wzh=0\].*?\[\/wzh\]\[\/center\]\s*\n+# \[wzh=1\]Biografía y Enlaces\[\/wzh\]\s*\n([\s\S]*?)\n+---\s*(?:\n|$)/;
+    const BIO_BLOCK_REGEX = /(?:^|\n)---\s*\n+\[center\]\[wzh=0\].*?\[\/wzh\]\[\/center\]\s*\n+# \[wzh=1\]Biografía y Enlaces\[\/wzh\]\s*\n([\s\S]*?)(?=\n---)/;
     const FAQ_BLOCK_HEADER = "# [wzh=1]Preguntas Frecuentes[/wzh]";
     const FAQ_BLOCK_REGEX = /(?:^|\n)---\s*\n+# \[wzh=1\]Preguntas Frecuentes\[\/wzh\]\s*\n+([\s\S]*?)\n+---\s*(?:\n|$)/;
     const INTRO_BLOCK_HEADER_FULL = "[center][wzh=0]![Info64x64|64x64](upload://1cG8aFsGrCONmfJ4R1Bzb5PP9Ia.png)[/wzh][/center]\n\n# [wzh=1]Introducción[/wzh]";
     const INTRO_BLOCK_END_MARKER = "\n\n---";
     const TITLE_BLOCK_TOC_MARKER = "<div data-theme-toc=\"true\"> </div>";
     
-    // --- Funciones de Lógica de Bloques ---
+    // (AQUÍ VA EL RESTO DE FUNCIONES Y CONSTANTES DE LOS BLOQUES)
 
-    function formatLineAsHeader(line) {
-        if (!line.trim()) return "";
-        const text = line.replace(/^[\d\.]+\s*/, '').trim();
-        const numberMatch = line.match(/^([\d\.]+)/);
-        const level = numberMatch ? (numberMatch[1].match(/\d+/g) || []).length : 1;
-        const markdownPrefix = '#'.repeat(level) + ' ';
-        return `${markdownPrefix}[wzh=${level}]${text}[/wzh]`;
-    }
-    function showTocGuideModal() {
-        if (document.getElementById('wz-toc-guide-modal')) return;
-        const modal = document.createElement('div');
-        modal.className = 'wz-toc-guide-modal';
-        modal.id = 'wz-toc-guide-modal';
-        const title = document.createElement('h3');
-        title.textContent = 'Guía de Plantillas TOC';
-        const selectLabel = document.createElement('label');
-        selectLabel.textContent = 'Selecciona un modelo de contenido:';
-        selectLabel.htmlFor = 'wz-toc-template-select';
-        const select = document.createElement('select');
-        select.id = 'wz-toc-template-select';
-        Object.keys(tocTemplates).forEach(key => {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = tocTemplates[key].title;
-            select.appendChild(option);
-        });
-        const display = document.createElement('div');
-        display.id = 'wz-toc-outline-display';
-        const buttonsDiv = document.createElement('div');
-        buttonsDiv.className = 'wz-modal-buttons';
-        const copyFeedback = document.createElement('span');
-        copyFeedback.id = 'wz-toc-copy-feedback';
-        const copyBtn = createButton('Copiar Esquema', 'wz-confirm', () => {
-            const selectedKey = select.value;
-            const template = tocTemplates[selectedKey];
-            if (!template) return;
-            const textToCopy = template.structure.map(formatLineAsHeader).join('\n\n');
-            const tempTextarea = document.createElement('textarea');
-            tempTextarea.style.position = 'absolute'; tempTextarea.style.left = '-9999px';
-            tempTextarea.value = textToCopy;
-            document.body.appendChild(tempTextarea);
-            tempTextarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempTextarea);
-            copyFeedback.textContent = '¡Esquema copiado!';
-            setTimeout(() => { copyFeedback.textContent = ''; }, 2500);
-        });
-        const closeBtn = createButton('Cerrar', 'wz-cancel', () => modal.remove());
-        buttonsDiv.append(copyFeedback, copyBtn, closeBtn);
-        modal.append(title, selectLabel, select, display, buttonsDiv);
-        document.body.appendChild(modal);
-
-        const formatTocOutlineForDisplay = (structure) => {
-            display.innerHTML = '';
-            const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
-            structure.forEach(line => {
-                const numberMatch = line.match(/^([\d\.]+)/);
-                if (!numberMatch) return;
-                const level = (numberMatch[1].match(/\d+/g) || []).length;
-                const indent = '&nbsp;&nbsp;'.repeat(Math.max(0, level - 1));
-                const item = document.createElement('div');
-                item.className = 'wz-toc-item';
-                item.innerHTML = indent + line;
-                item.addEventListener('click', () => {
-                    if (textarea) {
-                        const headerText = line.replace(/^[\d\.]+\s*/, '').trim();
-                        applyHeadingFormatting(textarea, level, headerText);
-                    }
-                });
-                display.appendChild(item);
-            });
-        };
-        const updateDisplay = () => {
-            const template = tocTemplates[select.value];
-            if (template) { formatTocOutlineForDisplay(template.structure); }
-        };
-        select.addEventListener('change', updateDisplay);
-        updateDisplay();
-        select.focus();
-
-        const editorObserver = new MutationObserver(() => {
-            if (!document.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar, .editor-toolbar')) {
-                modal.remove();
-                editorObserver.disconnect();
-            }
-        });
-        editorObserver.observe(document.body, { childList: true, subtree: true });
-    }
-    
-    // --- Lógica de Bloque de Título ---
-    // (Incluir aquí toda la lógica de showTitleConfigModal y sus helpers)
-
-    // --- Lógica de Bloque de Introducción ---
-    // (Incluir aquí toda la lógica de showIntroductionConfigModal y sus helpers)
-
-    // --- Lógica de Bloque de Biografía ---
-    // (Incluir aquí toda la lógica de showBiographyConfigModal y sus helpers)
-
-    // --- Lógica de Bloque de FAQs ---
-    // (Incluir aquí toda la lógica de showFaqConfigModal y sus helpers)
-    
-    // --- Lógica de Bloque de Foro ---
-    // (Incluir aquí toda la lógica de applyForumDiscussionFormatting y sus helpers)
-
-    // API Pública
+    // --- API Pública ---
     return {
+        // Exponer aquí todas las funciones de acción de los botones
         showTocGuideModal,
         showTitleConfigModal,
         showIntroductionConfigModal,

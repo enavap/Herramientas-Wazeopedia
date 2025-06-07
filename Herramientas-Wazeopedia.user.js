@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      4.0.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
-// @author       Annthizze & Gemini
+// @author       Annthizze
 // @match        https://www.waze.com/discuss/*
 // @grant        GM_addStyle
 // @grant        GM_info

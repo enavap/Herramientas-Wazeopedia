@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      6.1.0
+// @version      6.2.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
-// @require      https://update.greasyfork.org/scripts/538610/1603505/Wazeopedia%20Core%20UI%20Library.js
-// @require      https://update.greasyfork.org/scripts/538615/1603508/Wazeopedia%20Blocks-Library.js
+// @require      https://update.greasyfork.org/scripts/538610/1603574/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538615/1603575/Wazeopedia%20Blocks-Library.js
 // @grant        GM_info
 // @license      MIT
 // ==/UserScript==
@@ -76,13 +76,11 @@
                     wrapper.className = 'wz-dropdown';
                     const content = document.createElement('div');
                     content.className = 'wz-dropdown-content';
-                    // CORRECCIÓN AQUÍ: la llamada a toggleDropdown ahora es correcta
                     const btn = UI.createButton(config.text, 'wz-custom-button btn wz-dropdown-toggle', e => {
                         e.stopPropagation();
-                        UI.toggleDropdown(content); // <-- Llamada corregida
+                        UI.toggleDropdown(content);
                     });
-                    btn.id = config.id;
-                    btn.title = config.title;
+                    btn.id = config.id; btn.title = config.title;
 
                     config.dropdownItems.forEach(item => {
                         if (item.isSeparator) {
@@ -104,8 +102,7 @@
                         e.preventDefault();
                         if (typeof config.action === 'function') config.action(textarea);
                     });
-                    btn.id = config.id;
-                    btn.title = config.title;
+                    btn.id = config.id; btn.title = config.title;
                     buttonBarContainer.appendChild(btn);
                 }
             });
@@ -127,5 +124,4 @@
     }
 
     initializeTools();
-
 })();

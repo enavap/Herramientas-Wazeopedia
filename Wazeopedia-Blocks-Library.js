@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Blocks Library
 // @namespace    http://tampermonkey.net/
-// @version      5.0.0
+// @version      5.0.1
 // @description  Biblioteca de lógica para bloques de contenido de Wazeopedia (Título, Bio, FAQ, etc.).
 // @author       Annthizze
 // @require      https://update.greasyfork.org/scripts/538610/1603443/Wazeopedia%20Core%20UI%20Library.js

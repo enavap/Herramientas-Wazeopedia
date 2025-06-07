@@ -1,13 +1,12 @@
-
 // ==UserScript==
-// @name         Wazeopedia Blocks-Library
+// @name         Wazeopedia Blocks Library
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
 // @description  Biblioteca con la lógica para los bloques de contenido de Wazeopedia.
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
 // @license      MIT
-// @require https://update.greasyfork.org/scripts/538610/1602961/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538610/1602961/Wazeopedia%20Core%20UI%20Library.js
 // ==/UserScript==
 
 var WazeopediaBlocks = (function() {
@@ -137,16 +136,13 @@ var WazeopediaBlocks = (function() {
         editorObserver.observe(document.body, { childList: true, subtree: true });
     }
 
-    // --- Lógica de Bloques Finales (Refactorizada) ---
-    const FORUM_BLOCK_IDENTIFIER = "# [wzh=1]Foro de discusión:[/wzh]";
-    const FORUM_BLOCK_IMAGE = "[center]![image|128x128, 50%](upload://2cmYNNfUCAykbh8vW92usPC9Sf3.png)[/center]";
-    const FORUM_BLOCK_REGEX_STR = `(?:^|\n)---\s*\n+${FORUM_BLOCK_IMAGE.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}` + `\\s*${FORUM_BLOCK_IDENTIFIER.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}` + `[\\s\\S]*?` + `href="https://www\\.waze\\.com/discuss/new-topic\\?category=spain-usuarios-y-editores/wazeopedia-es/4779[^"]*">→aquí←</a>`;
-    const BIO_BLOCK_IMAGE_AND_HEADER = "[center][wzh=0]![image|128x128, 50%](upload://UTuWTJ1XEX6BVzoj1FIhLjAb6i.png)[/wzh][/center]\n\n# [wzh=1]Biografía y Enlaces[/wzh]";
-    const BIO_BLOCK_REGEX = /(?:^|\n)---\s*\n+\[center\]\[wzh=0\].*?\[\/wzh\]\[\/center\]\s*\n+# \[wzh=1\]Biografía y Enlaces\[\/wzh\]\s*\n([\s\S]*?)(?=\n---)/;
-    const FAQ_BLOCK_HEADER = "# [wzh=1]Preguntas Frecuentes[/wzh]";
-    const FAQ_BLOCK_REGEX = /(?:^|\n)---\s*\n+# \[wzh=1\]Preguntas Frecuentes\[\/wzh\]\s*\n+([\s\S]*?)\n+---\s*(?:\n|$)/;
-
-    // (Aquí irían todas las funciones de los bloques: showFaqConfigModal, showBiographyConfigModal, etc.)
+    // --- Lógica de Bloques (Aquí irá el resto de la lógica) ---
+    // (Este es un placeholder, el código completo se incluirá en la versión final)
+    const showTitleConfigModal = () => alert("Función 'Título' en construcción");
+    const showIntroductionConfigModal = () => alert("Función 'Introducción' en construcción");
+    const showBiographyConfigModal = () => alert("Función 'Biografía' en construcción");
+    const applyForumDiscussionFormatting = () => alert("Función 'Foro' en construcción");
+    const showFaqConfigModal = () => alert("Función 'FAQs' en construcción");
 
     // API Pública
     return {

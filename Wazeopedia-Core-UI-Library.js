@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
 // @description  Biblioteca de funciones de UI y utilidades para scripts de Wazeopedia.
-// @author       Annthizze & Gemini
+// @author       Annthizze
 // @match        https://www.waze.com/discuss/*
 // @license      MIT
 // ==/UserScript==

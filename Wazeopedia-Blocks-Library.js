@@ -6,7 +6,7 @@
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
 // @license      MIT
-// @require      // @require https://update.greasyfork.org/scripts/538610/1603073/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538610/1603073/Wazeopedia%20Core%20UI%20Library.js
 // ==/UserScript==
 
 var WazeopediaBlocks = (function() {

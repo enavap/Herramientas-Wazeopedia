@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      6.2.0.1
+// @version      6.2.0.2
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
 // @require      https://update.greasyfork.org/scripts/538610/1603574/Wazeopedia%20Core%20UI%20Library.js
-// @require      https://update.greasyfork.org/scripts/538615/1603587/Wazeopedia%20Blocks-Library.js
+// @require      https://update.greasyfork.org/scripts/538615/1603590/Wazeopedia%20Blocks-Library.js
 // @grant        GM_info
 // @license      MIT
 // ==/UserScript==

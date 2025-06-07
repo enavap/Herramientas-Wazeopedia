@@ -2,240 +2,205 @@
 // @name         Wazeopedia Core UI Library
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
-// @description  Biblioteca de funciones de UI y utilidades para scripts de Wazeopedia.
+// @description  Biblioteca de componentes de UI (modales, botones, estilos) para las herramientas de Wazeopedia.
 // @author       Annthizze
-// @match        https://www.waze.com/discuss/*
+// @grant        GM_addStyle
 // @license      MIT
 // ==/UserScript==
 
-var WazeopediaUI = (function() {
-    'use strict';
+'use strict';
 
-    // --- Funciones de Modal General ---
-    function showModal(message, type = 'alert', callback, isSubModal = false) {
-        if (!isSubModal) closeAllModals();
-        const overlay = document.createElement('div');
-        overlay.className = 'wz-modal-overlay';
-        if (isSubModal) overlay.style.zIndex = 2000 + document.querySelectorAll('.wz-modal-overlay').length;
-        const content = document.createElement('div'); content.className = 'wz-modal-content';
-        const messageP = document.createElement('p'); messageP.style.textAlign = 'center'; messageP.textContent = message; content.appendChild(messageP);
-        const buttonsDiv = document.createElement('div'); buttonsDiv.className = 'wz-modal-buttons'; buttonsDiv.style.textAlign = 'center';
-        if (type === 'confirm') {
-            buttonsDiv.appendChild(createButton('Sí', 'wz-confirm', () => { closeAllModals(); if (callback) callback(true); }));
-            buttonsDiv.appendChild(createButton('No', 'wz-cancel', () => { closeAllModals(); if (callback) callback(false); }));
-        } else {
-            buttonsDiv.appendChild(createButton('Aceptar', 'wz-confirm', () => { overlay.remove(); if (callback) callback(true); }));
-        }
-        content.appendChild(buttonsDiv); overlay.appendChild(content); document.body.appendChild(overlay);
-        setupModalEscape(overlay, type, callback);
+const WazeopediaUI = (function() {
+
+    // --- ESTILOS CSS (Claro y Oscuro) ---
+    function loadStyles() {
+        GM_addStyle(`
+            /* --- ESTILOS GENERALES Y MODO CLARO --- */
+            div.d-editor-button-bar, div.discourse-markdown-toolbar { display: flex !important; flex-wrap: wrap !important; padding-bottom: 5px !important; }
+            .wz-button-container { display: inline-flex; flex-wrap: wrap; align-items: center; border-left: 1px solid #ddd; margin-left: 10px; padding-left: 10px; }
+            .wz-custom-button { background-color: #32CD32; color: white; padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: bold; text-shadow: 1px 1px 1px rgba(0,0,0,0.2); transition: background-color 0.2s ease; margin-left: 6px; margin-bottom: 5px; }
+            .wz-custom-button:hover { background-color: #28a428; }
+            .wz-button-container > .wz-custom-button:first-child, .wz-button-container > .wz-dropdown:first-child { margin-left: 0; }
+            .wz-dropdown { position: relative; display: inline-block; margin-left: 6px; margin-bottom: 5px; }
+            .wz-dropdown-content { display: none; position: absolute; background-color: #f9f9f9; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1001; border-radius: 4px; padding: 5px 0; top: 100%; left: 0; margin-top: 3px; }
+            .wz-dropdown-content.wz-show { display: block; }
+            .wz-dropdown-content button { color: black; padding: 8px 12px; text-decoration: none; display: block; width: 100%; text-align: left; background-color: transparent; border: none; cursor: pointer; font-size: 0.9em; }
+            .wz-dropdown-content button:hover { background-color: #e9e9e9; }
+            .wz-dropdown-content hr { margin: 4px 8px; border-color: #ddd; border-style: solid; border-width: 1px 0 0 0; }
+            .wz-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+            .wz-modal-content { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); min-width: 400px; max-width: 700px; text-align: left; max-height: 80vh; display: flex; flex-direction: column; border: 1px solid #ccc; }
+            .wz-modal-content h3 { margin-top: 0; margin-bottom: 15px; text-align: center; color: #333; }
+            .wz-modal-content p { margin-bottom: 15px; font-size: 1em; color: #333; }
+            .wz-modal-content label { display: block; margin-bottom: 5px; font-weight: bold; color: #444; }
+            .wz-modal-content input[type="text"], .wz-modal-content textarea, .wz-modal-content select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; font-size: 0.9em; box-sizing: border-box; background-color: #fff; color: #222; }
+            .wz-modal-content textarea { min-height: 60px; }
+            .wz-modal-content .wz-checkbox-group { margin-bottom: 10px; display: flex; align-items: center; }
+            .wz-modal-content .wz-checkbox-group input[type="checkbox"] { margin-right: 8px; }
+            .wz-modal-content .wz-hidden-section { display: none; }
+            .wz-modal-scrollable-content { overflow-y: auto; flex-grow: 1; padding-right: 10px; }
+            .wz-modal-buttons { text-align: right; margin-top: 20px; padding-top:10px; border-top: 1px solid #eee;}
+            .wz-modal-buttons button { padding: 8px 15px; margin-left: 10px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; font-size: 0.9em; }
+            .wz-modal-buttons button.wz-confirm { background-color: #4CAF50; color: white; border-color: #4CAF50; }
+            .wz-modal-buttons button.wz-cancel { background-color: #f44336; color: white; border-color: #f44336; }
+            .wz-toc-guide-modal { position: fixed; top: 20px; right: 20px; width: 450px; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.25); z-index: 2100; display: flex; flex-direction: column; max-height: 90vh; }
+            .wz-toc-guide-modal select { width: 100%; }
+            #wz-toc-outline-display { background-color: #f4f4f4; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; flex-grow: 1; overflow-y: auto; margin-top: 10px; min-height: 200px; }
+            .wz-toc-item { padding: 4px 8px; border-radius: 3px; cursor: pointer; white-space: pre; }
+            .wz-toc-item:hover { background-color: #d4edff; color: #004085; }
+            #wz-toc-copy-feedback { color: green; font-style: italic; display: inline-block; margin-right: auto; }
+            .wz-bio-entry details, .wz-faq-entry details { border: 1px solid #eee; border-radius: 4px; margin-bottom: 10px; }
+            .wz-bio-entry summary, .wz-faq-entry summary { padding: 10px; background-color: #f9f9f9; cursor: pointer; font-weight: bold; border-radius: 3px 3px 0 0; color: #555; }
+            .wz-bio-entry summary:hover, .wz-faq-entry summary:hover { background-color: #efefef; }
+            .wz-bio-entry details[open] summary, .wz-faq-entry details[open] summary { background-color: #e0e0e0; }
+            .wz-bio-entry .wz-bio-entry-content, .wz-faq-entry .wz-faq-entry-content { padding: 10px; border-top: 1px solid #eee; }
+            .wz-bio-entry .wz-bio-remove-btn, .wz-faq-entry .wz-faq-remove-btn { background-color: #ff6b6b; color:white; border:none; padding: 5px 10px; border-radius:3px; cursor:pointer; float:right; margin-top: -5px; }
+            .wz-bio-add-entry-btn, .wz-faq-add-entry-btn { display:block; margin: 10px auto 0; padding: 8px 15px; }
+            .wz-bio-modal-error, .wz-title-modal-error, .wz-faq-modal-error { color: #D32F2F; font-size: 0.9em; text-align: center; margin-bottom: 10px; padding: 5px; border: 1px solid #ffcdd2; background-color: #ffebee; border-radius: 3px; }
+            .wz-bio-preview-label, .wz-faq-preview-label { font-weight: bold; margin-top:10px; margin-bottom:3px; font-size:0.9em; color: #444;}
+            .wz-bio-entry-preview, .wz-faq-entry-preview { margin-top: 5px; padding: 8px; background-color: #f0f0f0; color: #333; border: 1px dashed #ccc; border-radius: 4px; font-size: 0.9em; white-space: pre-wrap; word-wrap: break-word; min-height: 2em; }
+            .wz-bio-entry-preview a, .wz-faq-entry-preview a { color: blue; text-decoration: underline; cursor: help; }
+
+            /* --- ESTILOS MODO OSCURO --- */
+            .wz-dark-mode .wz-button-container { border-left-color: #555; }
+            .wz-dark-mode .wz-custom-button { background-color: #3a3a3a; color: #e0e0e0; border: 1px solid #555; text-shadow: none; }
+            .wz-dark-mode .wz-custom-button:hover { background-color: #007bff; border-color: #007bff; color: white; }
+            .wz-dark-mode .wz-modal-content, .wz-dark-mode .wz-toc-guide-modal { background-color: #2b2b2b; color: #e0e0e0; border: 1px solid #555; }
+            .wz-dark-mode .wz-modal-content h3, .wz-dark-mode .wz-modal-content p, .wz-dark-mode .wz-modal-content label { color: #e0e0e0; }
+            .wz-dark-mode .wz-modal-content input[type="text"], .wz-dark-mode .wz-modal-content textarea, .wz-dark-mode .wz-modal-content select, .wz-dark-mode .wz-toc-guide-modal select { background-color: #3a3a3a; color: #e0e0e0; border: 1px solid #666; }
+            .wz-dark-mode .wz-modal-content input[type="text"]:focus, .wz-dark-mode .wz-modal-content textarea:focus, .wz-dark-mode .wz-modal-content select:focus { border-color: #007bff; box-shadow: 0 0 0 1px #007bff; }
+            .wz-dark-mode .wz-modal-buttons { border-top-color: #444; }
+            .wz-dark-mode .wz-modal-buttons button.wz-confirm { background-color: #007bff; border-color: #007bff; }
+            .wz-dark-mode .wz-modal-buttons button.wz-cancel { background-color: #555; border-color: #555; color: #e0e0e0; }
+            .wz-dark-mode .wz-dropdown-content { background-color: #3a3a3a; border: 1px solid #555; }
+            .wz-dark-mode .wz-dropdown-content button { color: #e0e0e0; }
+            .wz-dark-mode .wz-dropdown-content button:hover { background-color: #007bff; color: white; }
+            .wz-dark-mode .wz-dropdown-content hr { border-color: #555; }
+            .wz-dark-mode #wz-toc-outline-display { background-color: #3a3a3a; color: #e0e0e0; border-color: #555; }
+            .wz-dark-mode .wz-toc-item:hover { background-color: #007bff; color: white; }
+            .wz-dark-mode #wz-toc-copy-feedback { color: #28a745; }
+            .wz-dark-mode .wz-bio-entry details, .wz-dark-mode .wz-faq-entry details { border-color: #444; }
+            .wz-dark-mode .wz-bio-entry summary, .wz-dark-mode .wz-faq-entry summary { background-color: #3a3a3a; color: #e0e0e0; }
+            .wz-dark-mode .wz-bio-entry summary:hover, .wz-dark-mode .wz-faq-entry summary:hover { background-color: #4a4a4a; }
+            .wz-dark-mode .wz-bio-entry details[open] summary, .wz-dark-mode .wz-faq-entry details[open] summary { background-color: #007bff; color: white; }
+            .wz-dark-mode .wz-bio-entry .wz-bio-entry-content, .wz-dark-mode .wz-faq-entry .wz-faq-entry-content { border-top-color: #444; }
+            .wz-dark-mode .wz-bio-entry-preview, .wz-dark-mode .wz-faq-entry-preview { background-color: #3a3a3a; color: #e0e0e0; border-color: #555; }
+            .wz-dark-mode .wz-bio-modal-error, .wz-dark-mode .wz-title-modal-error, .wz-dark-mode .wz-faq-modal-error { background-color: #5d3434; color: #ffcdd2; border-color: #8b4444; }
+            .wz-dark-mode .wz-forum-update-modal-item { background-color: #3a3a3a; border-color: #555; }
+            .wz-dark-mode .wz-forum-update-modal-item .label { color: #bbb; }
+            .wz-dark-mode .wz-forum-update-modal-item .value { background-color: #2b2b2b; border-color: #555; }
+        `);
     }
 
-    function createButton(text, className, onClick) {
-        const button = document.createElement('button');
-        button.textContent = text; button.className = className; button.onclick = onClick;
-        return button;
-    }
+    // --- Funciones Públicas ---
+    const publicApi = {
+        // --- Lógica de Desplegables ---
+        closeAllDropdowns: function() {
+            document.querySelectorAll('.wz-dropdown-content.wz-show').forEach(dd => dd.classList.remove('wz-show'));
+            document.removeEventListener('click', publicApi.handleClickOutsideDropdowns);
+        },
 
-    function setupModalEscape(overlay, type, callback) {
-        const escapeHandler = e => {
-            if (e.key === 'Escape') {
-                const allOverlays = document.querySelectorAll('.wz-modal-overlay, .wz-toc-guide-modal-overlay');
-                let maxZ = 0; allOverlays.forEach(ov => maxZ = Math.max(maxZ, parseInt(getComputedStyle(ov).zIndex) || 0));
-                const overlayZ = parseInt(getComputedStyle(overlay).zIndex) || 0;
-                if (overlayZ < maxZ) return;
-                closeAllModals();
-                if (type === 'confirm' && callback) callback(false); else if (type === 'form' && callback) callback(false); else if (callback) callback(true);
-                document.removeEventListener('keydown', escapeHandler);
+        handleClickOutsideDropdowns: function(event) {
+            if (!event.target.closest('.wz-dropdown')) {
+                publicApi.closeAllDropdowns();
             }
-        };
-        overlay.tabIndex = -1; overlay.focus(); document.addEventListener('keydown', escapeHandler, { once: true });
-    }
+        },
 
-    function closeAllModals() {
-        document.querySelectorAll('.wz-modal-overlay, .wz-toc-guide-modal').forEach(modal => modal.remove());
-        const tocOverlay = document.getElementById('wz-toc-guide-overlay');
-        if (tocOverlay) tocOverlay.remove();
-    }
+        toggleDropdown: function(buttonElement, dropdownContentElement) {
+            const isCurrentlyShown = dropdownContentElement.classList.contains('wz-show');
+            publicApi.closeAllDropdowns();
+            if (!isCurrentlyShown) {
+                dropdownContentElement.classList.add('wz-show');
+                setTimeout(() => document.addEventListener('click', publicApi.handleClickOutsideDropdowns), 0);
+            }
+        },
 
-    // --- Funciones de Utilidad ---
-    function insertTextAtCursor(textarea, text, cursorOffsetInfo = false) {
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const textBefore = textarea.value.substring(0, start);
-        const textAfter = textarea.value.substring(end);
-        textarea.value = textBefore + text + textAfter;
-        if (cursorOffsetInfo && typeof cursorOffsetInfo.position === 'number') {
-            const finalPos = start + cursorOffsetInfo.position;
-            textarea.selectionStart = textarea.selectionEnd = finalPos;
-        } else if (cursorOffsetInfo === false) {
-            textarea.selectionStart = start;
-            textarea.selectionEnd = start + text.length;
-        } else {
-            textarea.selectionStart = textarea.selectionEnd = start + text.length;
-        }
-        textarea.focus();
-        textarea.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-    }
-    
-    function ensureProperSpacing(currentText, newBlockText, position, relativeBlockData) {
-        let before = "", after = "", middle = newBlockText;
-        const twoNewlines = "\n\n";
-        switch (position) {
-            case 'start':
-                before = ""; after = currentText;
-                if (after.trim().length > 0 && !middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); }
-                else if (after.trim().length > 0 && middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; }
-                break;
-            case 'end':
-                before = currentText; after = "";
-                if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && !before.endsWith("\n")) { middle = (before.endsWith("\n") ? "\n" : twoNewlines) + middle; }
-                else if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && before.endsWith("\n") && !before.endsWith(twoNewlines) ){ middle = "\n" + middle; }
-                break;
-            case 'afterRelative':
-                if (!relativeBlockData) return ensureProperSpacing(currentText, newBlockText, 'start');
-                before = currentText.substring(0, relativeBlockData.endIndex);
-                after = currentText.substring(relativeBlockData.endIndex);
-                if (!before.endsWith(twoNewlines) && !before.endsWith("\n")) middle = twoNewlines + middle;
-                else if (before.endsWith("\n") && !before.endsWith(twoNewlines) && !middle.startsWith("\n")) middle = "\n" + middle;
-                if (after.trim().length > 0 && !middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); }
-                else if (after.trim().length > 0 && middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; }
-                break;
-            case 'beforeRelative':
-                 if (!relativeBlockData) return ensureProperSpacing(currentText, newBlockText, 'end');
-                 before = currentText.substring(0, relativeBlockData.startIndex);
-                 after = currentText.substring(relativeBlockData.startIndex);
-                 if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && !before.endsWith("\n")) { middle = (before.endsWith("\n") ? "\n" : twoNewlines) + middle; }
-                 else if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && before.endsWith("\n") && !before.endsWith(twoNewlines) ){ middle = "\n" + middle; }
-                 if (!middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); }
-                 else if (middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; }
-                 break;
-            default: return { textToInsert: newBlockText.trim(), cursorPosition: newBlockText.trim().length };
-        }
-        return { textToInsert: before + middle + after, cursorPosition: (before + middle).length };
-    }
-
-    function applyHeadingFormatting(textarea, level, text = '') {
-        const selectedText = text || textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
-        const markdownPrefix = '#'.repeat(level) + ' ';
-        const wzhTagOpen = `[wzh=${level}]`; const wzhTagClose = `[/wzh]`;
-        let coreText = selectedText ? `${markdownPrefix}${wzhTagOpen}${selectedText}${wzhTagClose}` : `${markdownPrefix}${wzhTagOpen}${wzhTagClose}`;
-        const textBeforeSelection = textarea.value.substring(0, textarea.selectionStart);
-        let prefix = "";
-        if (textarea.selectionStart > 0 && !textBeforeSelection.endsWith("\n\n") && !textBeforeSelection.endsWith("\n")) { prefix = "\n\n"; }
-        else if (textarea.selectionStart > 0 && textBeforeSelection.endsWith("\n") && !textBeforeSelection.endsWith("\n\n")) { prefix = "\n"; }
-        let textToInsert = prefix + coreText;
-        const cursorPosition = selectedText ? textToInsert.length : (prefix + markdownPrefix + wzhTagOpen).length;
-        insertTextAtCursor(textarea, textToInsert, { position: cursorPosition });
-    }
-
-    function applyHrFormatting(textarea) {
-        let textToInsert = "\n---\n";
-        const textBefore = textarea.value.substring(0, textarea.selectionStart);
-        if (textBefore.trim() === '') { textToInsert = "---\n\n"; }
-        else if (!textBefore.endsWith('\n\n')) { textToInsert = (textBefore.endsWith('\n') ? '\n' : '\n\n') + '---'; }
-        else { textToInsert = '---'; }
-        const textAfter = textarea.value.substring(textarea.selectionEnd);
-        if (textAfter.trim() === '') { textToInsert += '\n'; }
-        else if (!textAfter.startsWith('\n\n')) { textToInsert += (textAfter.startsWith('\n') ? '\n' : '\n\n'); }
-        insertTextAtCursor(textarea, textToInsert, { position: textToInsert.length });
-    }
-
-    // --- Lógica de Desplegables y Botones ---
-    function closeAllDropdowns() {
-        document.querySelectorAll('.wz-dropdown-content.wz-show').forEach(dd => dd.classList.remove('wz-show'));
-        document.removeEventListener('click', handleClickOutsideDropdowns);
-    }
-    function handleClickOutsideDropdowns(event) {
-        if (!event.target.closest('.wz-dropdown')) closeAllDropdowns();
-    }
-    function toggleDropdown(buttonElement, dropdownContentElement) {
-        const isCurrentlyShown = dropdownContentElement.classList.contains('wz-show');
-        closeAllDropdowns();
-        if (!isCurrentlyShown) {
-            dropdownContentElement.classList.add('wz-show');
-            setTimeout(() => document.addEventListener('click', handleClickOutsideDropdowns), 0);
-        }
-    }
-    function addCustomButtons(buttonConfigs) {
-        const editorToolbar = document.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar, .editor-toolbar');
-        if (!editorToolbar) return;
-        let buttonBarContainer = editorToolbar.querySelector('.wz-button-container');
-        if (buttonBarContainer && buttonBarContainer.dataset.wzToolsProcessed === 'true') return;
-        if (!buttonBarContainer) {
-            buttonBarContainer = document.createElement('div');
-            buttonBarContainer.className = 'wz-button-container';
-            const lastGroup = Array.from(editorToolbar.children).filter(el => el.matches('.btn-group, button')).pop();
-            if (lastGroup) lastGroup.insertAdjacentElement('afterend', buttonBarContainer); else editorToolbar.appendChild(buttonBarContainer);
-        }
-        buttonBarContainer.innerHTML = '';
-        buttonBarContainer.dataset.wzToolsProcessed = 'true';
-        const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
-        if (!textarea) return;
-        buttonConfigs.forEach(config => {
-            if (config.isDropdown) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'wz-dropdown';
-                const btn = createButton(config.text, 'wz-custom-button btn wz-dropdown-toggle', e => { e.stopPropagation(); toggleDropdown(btn, content); });
-                btn.id = config.id; btn.title = config.title;
-                const content = document.createElement('div'); content.className = 'wz-dropdown-content';
-                config.dropdownItems.forEach(item => {
-                    if (item.isSeparator) {
-                        const separator = document.createElement('hr');
-                        separator.style.margin = '4px 8px';
-                        separator.style.borderColor = '#ddd';
-                        content.appendChild(separator);
-                        return;
-                    }
-                    const ddBtn = createButton(item.text, '', e => {
-                        e.stopPropagation();
-                        if (typeof item.action === 'function') { item.action(textarea); }
-                        closeAllDropdowns();
-                    });
-                    ddBtn.title = item.title || `Insertar ${item.text}`;
-                    content.appendChild(ddBtn);
-                });
-                wrapper.append(btn, content);
-                buttonBarContainer.appendChild(wrapper);
+        // --- Funciones de Utilidad de Texto ---
+        insertTextAtCursor: function(textarea, text, cursorOffsetInfo = false) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const textBefore = textarea.value.substring(0, start);
+            const textAfter = textarea.value.substring(end);
+            textarea.value = textBefore + text + textAfter;
+            if (cursorOffsetInfo && typeof cursorOffsetInfo.position === 'number') {
+                textarea.selectionStart = textarea.selectionEnd = start + cursorOffsetInfo.position;
+            } else if (cursorOffsetInfo === false) {
+                textarea.selectionStart = start;
+                textarea.selectionEnd = start + text.length;
             } else {
-                const btn = createButton(config.text, 'wz-custom-button btn', e => {
-                    e.preventDefault(); e.stopPropagation();
-                    if (typeof config.action === 'function') { config.action(textarea); }
-                });
-                btn.id = config.id; btn.title = config.title;
-                buttonBarContainer.appendChild(btn);
+                textarea.selectionStart = textarea.selectionEnd = start + text.length;
             }
-        });
-    }
+            textarea.focus();
+            textarea.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+        },
 
-    // --- INICIALIZACIÓN Y GESTIÓN DEL TEMA ---
-    function applyTheme() {
-        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.body.classList.toggle('wz-dark-mode', isDark);
-    }
+        // --- Funciones de Modal General ---
+        closeAllModals: function() {
+            document.querySelectorAll('.wz-modal-overlay, .wz-toc-guide-modal').forEach(modal => modal.remove());
+            const tocOverlay = document.getElementById('wz-toc-guide-overlay');
+            if (tocOverlay) tocOverlay.remove();
+        },
+        
+        createButton: function(text, className, onClick) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = className;
+            button.onclick = onClick;
+            return button;
+        },
 
-    function init(buttonConfigs) {
-        const editorObserver = new MutationObserver(() => {
-            if (document.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar, .editor-toolbar') && !document.getElementById('wz-btn-toc')) {
-                addCustomButtons(buttonConfigs);
-                applyTheme();
+        setupModalEscape: function(overlay, type, callback) {
+             const escapeHandler = e => {
+                if (e.key === 'Escape') {
+                    const allOverlays = document.querySelectorAll('.wz-modal-overlay, .wz-toc-guide-modal-overlay');
+                    let maxZ = 0;
+                    allOverlays.forEach(ov => maxZ = Math.max(maxZ, parseInt(getComputedStyle(ov).zIndex) || 0));
+                    const overlayZ = parseInt(getComputedStyle(overlay).zIndex) || 0;
+                    if (overlayZ < maxZ) return;
+                    publicApi.closeAllModals();
+                    if (type === 'confirm' && callback) callback(false);
+                    else if (type === 'form' && callback) callback(false);
+                    else if (callback) callback(true);
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            overlay.tabIndex = -1;
+            overlay.focus();
+            document.addEventListener('keydown', escapeHandler, { once: true });
+        },
+
+        showModal: function(message, type = 'alert', callback, isSubModal = false) {
+            if (!isSubModal) publicApi.closeAllModals();
+            const overlay = document.createElement('div');
+            overlay.className = 'wz-modal-overlay';
+            if (isSubModal) overlay.style.zIndex = 2000 + document.querySelectorAll('.wz-modal-overlay').length;
+
+            const content = document.createElement('div');
+            content.className = 'wz-modal-content';
+            const messageP = document.createElement('p');
+            messageP.style.textAlign = 'center';
+            messageP.textContent = message;
+            content.appendChild(messageP);
+
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.className = 'wz-modal-buttons';
+            buttonsDiv.style.textAlign = 'center';
+
+            if (type === 'confirm') {
+                buttonsDiv.appendChild(publicApi.createButton('Sí', 'wz-confirm', () => { publicApi.closeAllModals(); if (callback) callback(true); }));
+                buttonsDiv.appendChild(publicApi.createButton('No', 'wz-cancel', () => { publicApi.closeAllModals(); if (callback) callback(false); }));
+            } else {
+                buttonsDiv.appendChild(publicApi.createButton('Aceptar', 'wz-confirm', () => { overlay.remove(); if (callback) callback(true); }));
             }
-        });
-        editorObserver.observe(document.body, { childList: true, subtree: true });
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-        addCustomButtons(buttonConfigs);
-        applyTheme();
-    }
 
-    // API Pública de la biblioteca
-    return {
-        showModal,
-        createButton,
-        setupModalEscape,
-        closeAllModals,
-        insertTextAtCursor,
-        applyHeadingFormatting,
-        applyHrFormatting,
-        ensureProperSpacing,
-        init
+            content.appendChild(buttonsDiv);
+            overlay.appendChild(content);
+            document.body.appendChild(overlay);
+            publicApi.setupModalEscape(overlay, type, callback);
+        }
     };
+
+    // Cargar estilos al iniciar la biblioteca
+    loadStyles();
+
+    return publicApi;
 })();

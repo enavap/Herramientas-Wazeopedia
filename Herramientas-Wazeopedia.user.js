@@ -3,12 +3,12 @@
 // @namespace    http://tampermonkey.net/
 // @version      4.0.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
-// @author       Annthizze
+// @author       Annthizze & Gemini
 // @match        https://www.waze.com/discuss/*
 // @grant        GM_addStyle
 // @grant        GM_info
-// @require https://update.greasyfork.org/scripts/538615/1602964/Wazeopedia%20Blocks-Library.js
-// @require https://update.greasyfork.org/scripts/538610/1602961/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538610/1602961/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538615/1602964/Wazeopedia%20Blocks-Library.js
 // @license      MIT
 // @downloadURL  https://update.greasyfork.org/scripts/538279/Herramientas%20Wazeopedia.user.js
 // @updateURL    https://update.greasyfork.org/scripts/538279/Herramientas%20Wazeopedia.meta.js

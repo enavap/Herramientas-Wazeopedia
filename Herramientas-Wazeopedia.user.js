@@ -1,17 +1,19 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      3.1.5
+// @version      3.1.6
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
-// @require      https://update.greasyfork.org/scripts/538610/1603073/Wazeopedia%20Core%20UI%20Library.js
-// @require      https://update.greasyfork.org/scripts/538615/1603086/Wazeopedia%20Blocks-Library.js
+// @require      https://update.greasyfork.org/scripts/538610/VERSION_UI/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538615/VERSION_BLOCKS/Wazeopedia%20Blocks-Library.js
 // @grant        GM_info
 // @license      MIT
 // @downloadURL  https://update.greasyfork.org/scripts/YOUR_MAIN_SCRIPT_ID/Herramientas%20Wazeopedia.user.js
 // @updateURL    https://update.greasyfork.org/scripts/YOUR_MAIN_SCRIPT_ID/Herramientas%20Wazeopedia.meta.js
 // ==/UserScript==
+
+// NOTA: Recuerda actualizar los números de versión en las URLs @require cuando publiques las bibliotecas.
 
 (function() {
     'use strict';
@@ -45,13 +47,14 @@
             id: 'wz-btn-toc',
             text: 'TOC',
             title: 'Mostrar guía de Tabla de Contenidos',
-            action: showTocGuideModal
+            // Se usa una función flecha para pasar los datos de las plantillas a la función de la biblioteca
+            action: () => WazeopediaUI.showTocGuideModal(tocTemplates)
         },
         {
             id: 'wz-btn-hr',
             text: '---',
             title: 'Insertar línea horizontal',
-            action: applyHrFormatting
+            action: WazeopediaUI.applyHrFormatting // Llama directamente a la función de la biblioteca
         },
         {
             id: 'wz-btn-headings',
@@ -59,12 +62,12 @@
             title: 'Insertar Encabezado (H1-H6)',
             isDropdown: true,
             dropdownItems: [
-                { text: 'H1', title: 'Insertar Encabezado de Nivel 1', action: (textarea) => applyHeadingFormatting(textarea, 1) },
-                { text: 'H2', title: 'Insertar Encabezado de Nivel 2', action: (textarea) => applyHeadingFormatting(textarea, 2) },
-                { text: 'H3', title: 'Insertar Encabezado de Nivel 3', action: (textarea) => applyHeadingFormatting(textarea, 3) },
-                { text: 'H4', title: 'Insertar Encabezado de Nivel 4', action: (textarea) => applyHeadingFormatting(textarea, 4) },
-                { text: 'H5', title: 'Insertar Encabezado de Nivel 5', action: (textarea) => applyHeadingFormatting(textarea, 5) },
-                { text: 'H6', title: 'Insertar Encabezado de Nivel 6', action: (textarea) => applyHeadingFormatting(textarea, 6) },
+                { text: 'H1', title: 'Insertar Encabezado de Nivel 1', action: (textarea) => WazeopediaUI.applyHeadingFormatting(textarea, 1) },
+                { text: 'H2', title: 'Insertar Encabezado de Nivel 2', action: (textarea) => WazeopediaUI.applyHeadingFormatting(textarea, 2) },
+                { text: 'H3', title: 'Insertar Encabezado de Nivel 3', action: (textarea) => WazeopediaUI.applyHeadingFormatting(textarea, 3) },
+                { text: 'H4', title: 'Insertar Encabezado de Nivel 4', action: (textarea) => WazeopediaUI.applyHeadingFormatting(textarea, 4) },
+                { text: 'H5', title: 'Insertar Encabezado de Nivel 5', action: (textarea) => WazeopediaUI.applyHeadingFormatting(textarea, 5) },
+                { text: 'H6', title: 'Insertar Encabezado de Nivel 6', action: (textarea) => WazeopediaUI.applyHeadingFormatting(textarea, 6) },
             ]
         },
         {
@@ -82,108 +85,6 @@
             ]
         }
     ];
-
-    // --- FUNCIONES DE HERRAMIENTAS (no son bloques) ---
-
-    function applyHeadingFormatting(textarea, level, text = '') {
-        const selectedText = text || textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
-        const markdownPrefix = '#'.repeat(level) + ' ';
-        const wzhTagOpen = `[wzh=${level}]`; const wzhTagClose = `[/wzh]`;
-        let coreText = selectedText ? `${markdownPrefix}${wzhTagOpen}${selectedText}${wzhTagClose}` : `${markdownPrefix}${wzhTagOpen}${wzhTagClose}`;
-        const textBeforeSelection = textarea.value.substring(0, textarea.selectionStart);
-        let prefix = "";
-        if (textarea.selectionStart > 0 && !textBeforeSelection.endsWith("\n\n") && !textBeforeSelection.endsWith("\n")) { prefix = "\n\n"; }
-        else if (textarea.selectionStart > 0 && textBeforeSelection.endsWith("\n") && !textBeforeSelection.endsWith("\n\n")) { prefix = "\n"; }
-        let textToInsert = prefix + coreText;
-        const cursorPosition = selectedText ? textToInsert.length : (prefix + markdownPrefix + wzhTagOpen).length;
-        WazeopediaUI.insertTextAtCursor(textarea, textToInsert, { position: cursorPosition });
-    }
-
-    function applyHrFormatting(textarea) {
-        let textToInsert = "\n---\n";
-        const textBefore = textarea.value.substring(0, textarea.selectionStart);
-        if (textBefore.trim() === '') { textToInsert = "---\n\n"; }
-        else if (!textBefore.endsWith('\n\n')) { textToInsert = (textBefore.endsWith('\n') ? '\n' : '\n\n') + '---'; }
-        else { textToInsert = '---'; }
-        const textAfter = textarea.value.substring(textarea.selectionEnd);
-        if (textAfter.trim() === '') { textToInsert += '\n'; }
-        else if (!textAfter.startsWith('\n\n')) { textToInsert += (textAfter.startsWith('\n') ? '\n' : '\n\n'); }
-        WazeopediaUI.insertTextAtCursor(textarea, textToInsert, { position: textToInsert.length });
-    }
-
-    // --- Lógica para Guía de Plantillas TOC ---
-    function formatLineAsHeader(line) {
-        if (!line.trim()) return "";
-        const text = line.replace(/^[\d\.]+\s*/, '').trim();
-        const numberMatch = line.match(/^([\d\.]+)/);
-        const level = numberMatch ? (numberMatch[1].match(/\d+/g) || []).length : 1;
-        const markdownPrefix = '#'.repeat(level) + ' ';
-        return `${markdownPrefix}[wzh=${level}]${text}[/wzh]`;
-    }
-
-    function showTocGuideModal() {
-        if (document.getElementById('wz-toc-guide-modal')) return;
-        const modal = document.createElement('div');
-        modal.className = 'wz-toc-guide-modal';
-        modal.id = 'wz-toc-guide-modal';
-        modal.innerHTML = `
-            <h3>Guía de Plantillas TOC</h3>
-            <label for="wz-toc-template-select">Selecciona un modelo de contenido:</label>
-            <select id="wz-toc-template-select">
-                ${Object.keys(tocTemplates).map(key => `<option value="${key}">${tocTemplates[key].title}</option>`).join('')}
-            </select>
-            <div id="wz-toc-outline-display"></div>
-            <div class="wz-modal-buttons">
-                <span id="wz-toc-copy-feedback"></span>
-            </div>
-        `;
-
-        const display = modal.querySelector('#wz-toc-outline-display');
-        const buttonsDiv = modal.querySelector('.wz-modal-buttons');
-        const copyFeedback = modal.querySelector('#wz-toc-copy-feedback');
-        const select = modal.querySelector('#wz-toc-template-select');
-
-        const copyBtn = WazeopediaUI.createButton('Copiar Esquema', 'wz-confirm', () => {
-            const template = tocTemplates[select.value];
-            if (!template) return;
-            const textToCopy = template.structure.map(formatLineAsHeader).join('\n\n');
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                copyFeedback.textContent = '¡Esquema copiado!';
-                setTimeout(() => { copyFeedback.textContent = ''; }, 2500);
-            });
-        });
-
-        const closeBtn = WazeopediaUI.createButton('Cerrar', 'wz-cancel', () => modal.remove());
-        buttonsDiv.append(copyFeedback, copyBtn, closeBtn);
-        document.body.appendChild(modal);
-
-        const formatTocOutlineForDisplay = (structure) => {
-            display.innerHTML = '';
-            const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
-            structure.forEach(line => {
-                const numberMatch = line.match(/^([\d\.]+)/);
-                if (!numberMatch) return;
-                const level = (numberMatch[1].match(/\d+/g) || []).length;
-                const indent = '  '.repeat(Math.max(0, level - 1));
-                const item = document.createElement('div');
-                item.className = 'wz-toc-item';
-                item.innerHTML = indent + line;
-                item.onclick = () => {
-                    if (textarea) {
-                        const headerText = line.replace(/^[\d\.]+\s*/, '').trim();
-                        applyHeadingFormatting(textarea, level, headerText);
-                    }
-                };
-                display.appendChild(item);
-            });
-        };
-
-        const updateDisplay = () => formatTocOutlineForDisplay(tocTemplates[select.value].structure);
-        select.addEventListener('change', updateDisplay);
-        updateDisplay();
-        select.focus();
-    }
-
 
     // --- MONTAJE E INICIALIZACIÓN ---
 

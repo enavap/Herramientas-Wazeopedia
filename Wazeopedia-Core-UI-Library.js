@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Core UI Library
 // @namespace    http://tampermonkey.net/
-// @version      1.2.0
+// @version      1.2.1
 // @description  Biblioteca de componentes de UI (modales, botones, estilos) para las herramientas de Wazeopedia, ahora con i18n.
 // @author       Annthizze
 // @grant        GM_addStyle
@@ -37,7 +37,7 @@ const WazeopediaUI = (function() {
 
     // --- ESTILOS CSS (Claro y Oscuro) ---
     function loadStyles() {
-        const css = `
+        const css = 
             /* --- ESTILOS GENERALES Y MODO CLARO --- */
             div.d-editor-button-bar, div.discourse-markdown-toolbar { display: flex !important; flex-wrap: wrap !important; padding-bottom: 5px !important; }
             .wz-button-container { display: inline-flex; flex-wrap: wrap; align-items: center; border-left: 1px solid #ddd; margin-left: 10px; padding-left: 10px; }
@@ -110,7 +110,7 @@ const WazeopediaUI = (function() {
             .wz-dark-mode .wz-forum-update-modal-item { background-color: #3a3a3a; border-color: #555; }
             .wz-dark-mode .wz-forum-update-modal-item .label { color: #bbb; }
             .wz-dark-mode .wz-forum-update-modal-item .value { background-color: #2b2b2b; border-color: #555; }
-        `;
+        ;
         if (typeof GM_addStyle === 'function') {
             GM_addStyle(css);
         } else {

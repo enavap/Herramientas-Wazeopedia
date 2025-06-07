@@ -10,8 +10,7 @@
 
 'use strict';
 
-const WazeopediaUI = (function() {
-
+(function() {
     // --- ESTILOS CSS ---
     function loadStyles() {
         GM_addStyle(`
@@ -91,60 +90,107 @@ const WazeopediaUI = (function() {
         `);
     }
 
-    // --- Funciones privadas auxiliares ---
     function formatLineAsHeader(line) {
         if (!line.trim()) return "";
-        const text = line.replace(/^[\d\.]+\s*/, '').trim();
-        const numberMatch = line.match(/^([\d\.]+)/);
-        const level = numberMatch ? (numberMatch[1].match(/\d+/g) || []).length : 1;
+        const text = line.replace(/^[^a-zA-Z]+/, '').trim();
+        const numberMatch = line.match(/^[\d\.]+/);
+        const level = numberMatch ? (numberMatch[0].match(/\d+/g) || []).length : 1;
         const markdownPrefix = '#'.repeat(level) + ' ';
         return `${markdownPrefix}[wzh=${level}]${text}[/wzh]`;
     }
 
-    // --- API Pública ---
     const publicApi = {
-        closeAllDropdowns: function() { /* ... */ },
-        handleClickOutsideDropdowns: function(event) { /* ... */ },
-        toggleDropdown: function(buttonElement, dropdownContentElement) { /* ... */ },
-        insertTextAtCursor: function(textarea, text, cursorOffsetInfo = false) { /* ... */ },
+        insertTextAtCursor: function(textarea, text, cursorOffsetInfo = false) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            textarea.value = textarea.value.substring(0, start) + text + textarea.value.substring(end);
+            if (cursorOffsetInfo && typeof cursorOffsetInfo.position === 'number') {
+                textarea.selectionStart = textarea.selectionEnd = start + cursorOffsetInfo.position;
+            } else {
+                textarea.selectionStart = textarea.selectionEnd = start + text.length;
+            }
+            textarea.focus();
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+
         applyHeadingFormatting: function(textarea, level, text = '') {
             const selectedText = text || textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
             const markdownPrefix = '#'.repeat(level) + ' ';
-            const wzhTagOpen = `[wzh=${level}]`; const wzhTagClose = `[/wzh]`;
+            const wzhTagOpen = `[wzh=${level}]`;
+            const wzhTagClose = `[/wzh]`;
             let coreText = selectedText ? `${markdownPrefix}${wzhTagOpen}${selectedText}${wzhTagClose}` : `${markdownPrefix}${wzhTagOpen}${wzhTagClose}`;
             const textBeforeSelection = textarea.value.substring(0, textarea.selectionStart);
             let prefix = "";
-            if (textarea.selectionStart > 0 && !textBeforeSelection.endsWith("\n\n") && !textBeforeSelection.endsWith("\n")) { prefix = "\n\n"; }
-            else if (textarea.selectionStart > 0 && textBeforeSelection.endsWith("\n") && !textBeforeSelection.endsWith("\n\n")) { prefix = "\n"; }
-            let textToInsert = prefix + coreText;
+            if (textarea.selectionStart > 0 && !textBeforeSelection.endsWith("\n\n")) {
+                prefix = textBeforeSelection.endsWith("\n") ? "\n" : "\n\n";
+            }
+            const textToInsert = prefix + coreText;
             const cursorPosition = selectedText ? textToInsert.length : (prefix + markdownPrefix + wzhTagOpen).length;
             publicApi.insertTextAtCursor(textarea, textToInsert, { position: cursorPosition });
         },
+
         applyHrFormatting: function(textarea) {
-            let textToInsert = "\n---\n";
             const textBefore = textarea.value.substring(0, textarea.selectionStart);
-            if (textBefore.trim() === '') { textToInsert = "---\n\n"; }
-            else if (!textBefore.endsWith('\n\n')) { textToInsert = (textBefore.endsWith('\n') ? '\n' : '\n\n') + '---'; }
-            else { textToInsert = '---'; }
-            const textAfter = textarea.value.substring(textarea.selectionEnd);
-            if (textAfter.trim() === '') { textToInsert += '\n'; }
-            else if (!textAfter.startsWith('\n\n')) { textToInsert += (textAfter.startsWith('\n') ? '\n' : '\n\n'); }
-            publicApi.insertTextAtCursor(textarea, textToInsert, { position: textToInsert.length });
+            let prefix = "\n\n";
+            if (textBefore.length > 0 && !textBefore.endsWith("\n\n")) {
+                prefix = textBefore.endsWith("\n") ? "\n" : "\n\n";
+            }
+            publicApi.insertTextAtCursor(textarea, `${prefix}---\n`);
         },
-        closeAllModals: function() { /* ... */ },
-        createButton: function(text, className, onClick) { /* ... */ },
-        setupModalEscape: function(overlay, type, callback) { /* ... */ },
-        showModal: function(message, type = 'alert', callback, isSubModal = false) { /* ... */ },
-        showTocGuideModal: function(tocTemplates) {
+
+        createButton: function(text, className, onClick) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = className;
+            button.onclick = onClick;
+            return button;
+        },
+
+        closeAllModals: function() {
+            document.querySelectorAll('.wz-modal-overlay, .wz-toc-guide-modal').forEach(modal => modal.remove());
+        },
+
+        showModal: function(message, type = 'alert', callback, isSubModal = false) {
+            if (!isSubModal) publicApi.closeAllModals();
+            const overlay = document.createElement('div');
+            overlay.className = 'wz-modal-overlay';
+            if (isSubModal) overlay.style.zIndex = 2000 + document.querySelectorAll('.wz-modal-overlay').length;
+
+            const content = document.createElement('div');
+            content.className = 'wz-modal-content';
+            const messageP = document.createElement('p');
+            messageP.style.textAlign = 'center';
+            messageP.textContent = message;
+            content.appendChild(messageP);
+
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.className = 'wz-modal-buttons';
+            buttonsDiv.style.textAlign = 'center';
+
+            if (type === 'confirm') {
+                buttonsDiv.appendChild(publicApi.createButton('Sí', 'wz-confirm', () => { publicApi.closeAllModals(); callback && callback(true); }));
+                buttonsDiv.appendChild(publicApi.createButton('No', 'wz-cancel', () => { publicApi.closeAllModals(); callback && callback(false); }));
+            } else {
+                buttonsDiv.appendChild(publicApi.createButton('Aceptar', 'wz-confirm', () => { overlay.remove(); callback && callback(true); }));
+            }
+
+            content.appendChild(buttonsDiv);
+            overlay.appendChild(content);
+            document.body.appendChild(overlay);
+        },
+
+        showTocGuideModal: function(textarea, tocTemplates) {
             if (document.getElementById('wz-toc-guide-modal')) return;
             const modal = document.createElement('div');
             modal.className = 'wz-toc-guide-modal';
             modal.id = 'wz-toc-guide-modal';
             modal.innerHTML = `<h3>Guía de Plantillas TOC</h3><label for="wz-toc-template-select">Selecciona un modelo de contenido:</label><select id="wz-toc-template-select">${Object.keys(tocTemplates).map(key => `<option value="${key}">${tocTemplates[key].title}</option>`).join('')}</select><div id="wz-toc-outline-display"></div><div class="wz-modal-buttons"><span id="wz-toc-copy-feedback"></span></div>`;
+
             const display = modal.querySelector('#wz-toc-outline-display');
             const buttonsDiv = modal.querySelector('.wz-modal-buttons');
             const copyFeedback = modal.querySelector('#wz-toc-copy-feedback');
             const select = modal.querySelector('#wz-toc-template-select');
+
             const copyBtn = publicApi.createButton('Copiar Esquema', 'wz-confirm', () => {
                 const template = tocTemplates[select.value];
                 if (!template) return;
@@ -154,38 +200,52 @@ const WazeopediaUI = (function() {
                     setTimeout(() => { copyFeedback.textContent = ''; }, 2500);
                 });
             });
+
             const closeBtn = publicApi.createButton('Cerrar', 'wz-cancel', () => modal.remove());
             buttonsDiv.append(copyFeedback, copyBtn, closeBtn);
             document.body.appendChild(modal);
+
             const formatTocOutlineForDisplay = (structure) => {
                 display.innerHTML = '';
-                const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
                 structure.forEach(line => {
-                    const numberMatch = line.match(/^([\d\.]+)/);
-                    if (!numberMatch) return;
-                    const level = (numberMatch[1].match(/\d+/g) || []).length;
+                    const numberMatch = line.match(/^[\d\.]+/);
+                    const level = numberMatch ? (numberMatch[0].match(/\d+/g) || []).length : 1;
                     const indent = '  '.repeat(Math.max(0, level - 1));
                     const item = document.createElement('div');
                     item.className = 'wz-toc-item';
                     item.innerHTML = indent + line;
                     item.onclick = () => {
-                        if (textarea) {
-                            const headerText = line.replace(/^[\d\.]+\s*/, '').trim();
-                            publicApi.applyHeadingFormatting(textarea, level, headerText);
-                        }
+                        const headerText = line.replace(/^[\d\.]+\s*/, '').trim();
+                        publicApi.applyHeadingFormatting(textarea, level, headerText);
                     };
                     display.appendChild(item);
                 });
             };
+
             const updateDisplay = () => formatTocOutlineForDisplay(tocTemplates[select.value].structure);
             select.addEventListener('change', updateDisplay);
             updateDisplay();
             select.focus();
+        },
+
+        closeAllDropdowns: function() {
+             document.querySelectorAll('.wz-dropdown-content.wz-show').forEach(dd => {
+                dd.classList.remove('wz-show');
+            });
+        },
+
+        toggleDropdown: function(dropdownContentElement) {
+            const isShown = dropdownContentElement.classList.contains('wz-show');
+            publicApi.closeAllDropdowns();
+            if (!isShown) {
+                dropdownContentElement.classList.add('wz-show');
+            }
         }
     };
-    // El resto de definiciones de funciones de publicApi están omitidas por brevedad pero deben estar aquí.
 
     loadStyles();
-    console.log("Wazeopedia Core UI Library loaded.");
-    return publicApi;
+    // Exponer la API en el objeto window para que otros scripts @require puedan acceder a ella.
+    window.WazeopediaUI = publicApi;
+    console.log('Wazeopedia Core UI Library 5.0.0 loaded.');
+
 })();

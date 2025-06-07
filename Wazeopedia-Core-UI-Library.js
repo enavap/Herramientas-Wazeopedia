@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Core UI Library
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Biblioteca de componentes de UI (modales, botones, estilos) para las herramientas de Wazeopedia.
 // @author       Annthizze
 // @grant        GM_addStyle
@@ -12,7 +12,7 @@
 
 const WazeopediaUI = (function() {
 
-    // --- ESTILOS CSS (Claro y Oscuro) ---
+    // --- ESTILOS CSS (Sin cambios) ---
     function loadStyles() {
         GM_addStyle(`
             /* --- ESTILOS GENERALES Y MODO CLARO --- */
@@ -91,6 +91,16 @@ const WazeopediaUI = (function() {
         `);
     }
 
+    // --- Funciones privadas auxiliares ---
+    function formatLineAsHeader(line) {
+        if (!line.trim()) return "";
+        const text = line.replace(/^[\d\.]+\s*/, '').trim();
+        const numberMatch = line.match(/^([\d\.]+)/);
+        const level = numberMatch ? (numberMatch[1].match(/\d+/g) || []).length : 1;
+        const markdownPrefix = '#'.repeat(level) + ' ';
+        return `${markdownPrefix}[wzh=${level}]${text}[/wzh]`;
+    }
+
     // --- Funciones Públicas ---
     const publicApi = {
         // --- Lógica de Desplegables ---
@@ -132,6 +142,33 @@ const WazeopediaUI = (function() {
             textarea.focus();
             textarea.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
         },
+
+        applyHeadingFormatting: function(textarea, level, text = '') {
+            const selectedText = text || textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+            const markdownPrefix = '#'.repeat(level) + ' ';
+            const wzhTagOpen = `[wzh=${level}]`; const wzhTagClose = `[/wzh]`;
+            let coreText = selectedText ? `${markdownPrefix}${wzhTagOpen}${selectedText}${wzhTagClose}` : `${markdownPrefix}${wzhTagOpen}${wzhTagClose}`;
+            const textBeforeSelection = textarea.value.substring(0, textarea.selectionStart);
+            let prefix = "";
+            if (textarea.selectionStart > 0 && !textBeforeSelection.endsWith("\n\n") && !textBeforeSelection.endsWith("\n")) { prefix = "\n\n"; }
+            else if (textarea.selectionStart > 0 && textBeforeSelection.endsWith("\n") && !textBeforeSelection.endsWith("\n\n")) { prefix = "\n"; }
+            let textToInsert = prefix + coreText;
+            const cursorPosition = selectedText ? textToInsert.length : (prefix + markdownPrefix + wzhTagOpen).length;
+            publicApi.insertTextAtCursor(textarea, textToInsert, { position: cursorPosition });
+        },
+
+        applyHrFormatting: function(textarea) {
+            let textToInsert = "\n---\n";
+            const textBefore = textarea.value.substring(0, textarea.selectionStart);
+            if (textBefore.trim() === '') { textToInsert = "---\n\n"; }
+            else if (!textBefore.endsWith('\n\n')) { textToInsert = (textBefore.endsWith('\n') ? '\n' : '\n\n') + '---'; }
+            else { textToInsert = '---'; }
+            const textAfter = textarea.value.substring(textarea.selectionEnd);
+            if (textAfter.trim() === '') { textToInsert += '\n'; }
+            else if (!textAfter.startsWith('\n\n')) { textToInsert += (textAfter.startsWith('\n') ? '\n' : '\n\n'); }
+            publicApi.insertTextAtCursor(textarea, textToInsert, { position: textToInsert.length });
+        },
+
 
         // --- Funciones de Modal General ---
         closeAllModals: function() {
@@ -196,6 +233,69 @@ const WazeopediaUI = (function() {
             overlay.appendChild(content);
             document.body.appendChild(overlay);
             publicApi.setupModalEscape(overlay, type, callback);
+        },
+
+        showTocGuideModal: function(tocTemplates) {
+            if (document.getElementById('wz-toc-guide-modal')) return;
+            const modal = document.createElement('div');
+            modal.className = 'wz-toc-guide-modal';
+            modal.id = 'wz-toc-guide-modal';
+            modal.innerHTML = `
+                <h3>Guía de Plantillas TOC</h3>
+                <label for="wz-toc-template-select">Selecciona un modelo de contenido:</label>
+                <select id="wz-toc-template-select">
+                    ${Object.keys(tocTemplates).map(key => `<option value="${key}">${tocTemplates[key].title}</option>`).join('')}
+                </select>
+                <div id="wz-toc-outline-display"></div>
+                <div class="wz-modal-buttons">
+                    <span id="wz-toc-copy-feedback"></span>
+                </div>
+            `;
+
+            const display = modal.querySelector('#wz-toc-outline-display');
+            const buttonsDiv = modal.querySelector('.wz-modal-buttons');
+            const copyFeedback = modal.querySelector('#wz-toc-copy-feedback');
+            const select = modal.querySelector('#wz-toc-template-select');
+
+            const copyBtn = publicApi.createButton('Copiar Esquema', 'wz-confirm', () => {
+                const template = tocTemplates[select.value];
+                if (!template) return;
+                const textToCopy = template.structure.map(formatLineAsHeader).join('\n\n');
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    copyFeedback.textContent = '¡Esquema copiado!';
+                    setTimeout(() => { copyFeedback.textContent = ''; }, 2500);
+                });
+            });
+
+            const closeBtn = publicApi.createButton('Cerrar', 'wz-cancel', () => modal.remove());
+            buttonsDiv.append(copyFeedback, copyBtn, closeBtn);
+            document.body.appendChild(modal);
+
+            const formatTocOutlineForDisplay = (structure) => {
+                display.innerHTML = '';
+                const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
+                structure.forEach(line => {
+                    const numberMatch = line.match(/^([\d\.]+)/);
+                    if (!numberMatch) return;
+                    const level = (numberMatch[1].match(/\d+/g) || []).length;
+                    const indent = '  '.repeat(Math.max(0, level - 1));
+                    const item = document.createElement('div');
+                    item.className = 'wz-toc-item';
+                    item.innerHTML = indent + line;
+                    item.onclick = () => {
+                        if (textarea) {
+                            const headerText = line.replace(/^[\d\.]+\s*/, '').trim();
+                            publicApi.applyHeadingFormatting(textarea, level, headerText); // Usar la función de la API
+                        }
+                    };
+                    display.appendChild(item);
+                });
+            };
+
+            const updateDisplay = () => formatTocOutlineForDisplay(tocTemplates[select.value].structure);
+            select.addEventListener('change', updateDisplay);
+            updateDisplay();
+            select.focus();
         }
     };
 

@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      6.2.0.2
+// @version      6.3.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
-// @require      https://update.greasyfork.org/scripts/538610/1603574/Wazeopedia%20Core%20UI%20Library.js
-// @require      https://update.greasyfork.org/scripts/538615/1603590/Wazeopedia%20Blocks-Library.js
+// @require      https://update.greasyfork.org/scripts/538610/1603597/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538744/1603596/Wazeopedia%20Content%20Library.js
+// @require      https://update.greasyfork.org/scripts/538615/1603598/Wazeopedia%20Blocks-Library.js
 // @grant        GM_info
 // @license      MIT
 // ==/UserScript==
@@ -15,7 +16,7 @@
     'use strict';
 
     function initializeTools() {
-        if (typeof window.WazeopediaUI === 'undefined' || typeof window.WazeopediaBlocks === 'undefined') {
+        if (typeof window.WazeopediaUI === 'undefined' || typeof window.WazeopediaBlocks === 'undefined' || typeof window.WazeopediaContent === 'undefined') {
             console.error('Herramientas Wazeopedia: Esperando a que las bibliotecas se carguen...');
             setTimeout(initializeTools, 100);
             return;
@@ -62,46 +63,26 @@
         function addCustomButtons() {
             const editorToolbar = document.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar, .editor-toolbar');
             if (!editorToolbar || editorToolbar.querySelector('.wz-button-container')) return;
-
             const buttonBarContainer = document.createElement('div');
             buttonBarContainer.className = 'wz-button-container';
             editorToolbar.appendChild(buttonBarContainer);
-
             const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
             if (!textarea) return;
 
             buttonConfigs.forEach(config => {
                 if (config.isDropdown) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'wz-dropdown';
-                    const content = document.createElement('div');
-                    content.className = 'wz-dropdown-content';
-                    const btn = UI.createButton(config.text, 'wz-custom-button btn wz-dropdown-toggle', e => {
-                        e.stopPropagation();
-                        UI.toggleDropdown(content);
-                    });
+                    const wrapper = document.createElement('div'); wrapper.className = 'wz-dropdown';
+                    const content = document.createElement('div'); content.className = 'wz-dropdown-content';
+                    const btn = UI.createButton(config.text, 'wz-custom-button btn wz-dropdown-toggle', e => { e.stopPropagation(); UI.toggleDropdown(content); });
                     btn.id = config.id; btn.title = config.title;
-
                     config.dropdownItems.forEach(item => {
-                        if (item.isSeparator) {
-                            content.appendChild(document.createElement('hr'));
-                        } else {
-                            const ddBtn = UI.createButton(item.text, '', e => {
-                                e.stopPropagation();
-                                if (typeof item.action === 'function') item.action(textarea);
-                                UI.closeAllDropdowns();
-                            });
-                            ddBtn.title = item.title || item.text;
-                            content.appendChild(ddBtn);
-                        }
+                        if (item.isSeparator) { content.appendChild(document.createElement('hr')); }
+                        else { const ddBtn = UI.createButton(item.text, '', e => { e.stopPropagation(); if (typeof item.action === 'function') item.action(textarea); UI.closeAllDropdowns(); }); ddBtn.title = item.title || item.text; content.appendChild(ddBtn); }
                     });
                     wrapper.append(btn, content);
                     buttonBarContainer.appendChild(wrapper);
                 } else {
-                    const btn = UI.createButton(config.text, 'wz-custom-button btn', e => {
-                        e.preventDefault();
-                        if (typeof config.action === 'function') config.action(textarea);
-                    });
+                    const btn = UI.createButton(config.text, 'wz-custom-button btn', e => { e.preventDefault(); if (typeof config.action === 'function') config.action(textarea); });
                     btn.id = config.id; btn.title = config.title;
                     buttonBarContainer.appendChild(btn);
                 }
@@ -116,7 +97,6 @@
         const editorObserver = new MutationObserver(addCustomButtons);
         editorObserver.observe(document.body, { childList: true, subtree: true });
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-
         addCustomButtons();
         applyTheme();
 

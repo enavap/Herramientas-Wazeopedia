@@ -13,7 +13,7 @@
 (function() {
     // --- ESTILOS CSS ---
     function loadStyles() {
-        GM_addStyle(`
+        GM_addStyle(
             /* --- ESTILOS GENERALES Y MODO CLARO --- */
             div.d-editor-button-bar, div.discourse-markdown-toolbar { display: flex !important; flex-wrap: wrap !important; padding-bottom: 5px !important; }
             .wz-button-container { display: inline-flex; flex-wrap: wrap; align-items: center; border-left: 1px solid #ddd; margin-left: 10px; padding-left: 10px; }
@@ -87,7 +87,7 @@
             .wz-dark-mode .wz-forum-update-modal-item { background-color: #3a3a3a; border-color: #555; }
             .wz-dark-mode .wz-forum-update-modal-item .label { color: #bbb; }
             .wz-dark-mode .wz-forum-update-modal-item .value { background-color: #2b2b2b; border-color: #555; }
-        `);
+        );
     }
 
     function formatLineAsHeader(line) {

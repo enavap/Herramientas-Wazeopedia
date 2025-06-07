@@ -46,7 +46,20 @@ var WazeopediaBlocks = (function() {
         }
     };
 
-    // --- Lógica de Bloque de TOC ---
+    // --- Constantes de Bloques ---
+    const FORUM_BLOCK_IDENTIFIER = "# [wzh=1]Foro de discusión:[/wzh]";
+    const FORUM_BLOCK_IMAGE = "[center]![image|128x128, 50%](upload://2cmYNNfUCAykbh8vW92usPC9Sf3.png)[/center]";
+    const FORUM_BLOCK_REGEX_STR = `(?:^|\n)---\s*\n+${FORUM_BLOCK_IMAGE.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}` + `\\s*${FORUM_BLOCK_IDENTIFIER.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}` + `[\\s\\S]*?` + `href="https://www\\.waze\\.com/discuss/new-topic\\?category=spain-usuarios-y-editores/wazeopedia-es/4779[^"]*">→aquí←</a>`;
+    const BIO_BLOCK_IMAGE_AND_HEADER = "[center][wzh=0]![image|128x128, 50%](upload://UTuWTJ1XEX6BVzoj1FIhLjAb6i.png)[/wzh][/center]\n\n# [wzh=1]Biografía y Enlaces[/wzh]";
+    const BIO_BLOCK_REGEX = /(?:^|\n)---\s*\n+\[center\]\[wzh=0\].*?\[\/wzh\]\[\/center\]\s*\n+# \[wzh=1\]Biografía y Enlaces\[\/wzh\]\s*\n([\s\S]*?)\n+---\s*(?:\n|$)/;
+    const FAQ_BLOCK_HEADER = "# [wzh=1]Preguntas Frecuentes[/wzh]";
+    const FAQ_BLOCK_REGEX = /(?:^|\n)---\s*\n+# \[wzh=1\]Preguntas Frecuentes\[\/wzh\]\s*\n+([\s\S]*?)\n+---\s*(?:\n|$)/;
+    const INTRO_BLOCK_HEADER_FULL = "[center][wzh=0]![Info64x64|64x64](upload://1cG8aFsGrCONmfJ4R1Bzb5PP9Ia.png)[/wzh][/center]\n\n# [wzh=1]Introducción[/wzh]";
+    const INTRO_BLOCK_END_MARKER = "\n\n---";
+    const TITLE_BLOCK_TOC_MARKER = "<div data-theme-toc=\"true\"> </div>";
+    
+    // --- Funciones de Lógica de Bloques ---
+
     function formatLineAsHeader(line) {
         if (!line.trim()) return "";
         const text = line.replace(/^[\d\.]+\s*/, '').trim();
@@ -135,14 +148,21 @@ var WazeopediaBlocks = (function() {
         });
         editorObserver.observe(document.body, { childList: true, subtree: true });
     }
+    
+    // --- Lógica de Bloque de Título ---
+    // (Incluir aquí toda la lógica de showTitleConfigModal y sus helpers)
 
-    // --- Lógica de Bloques (Aquí irá el resto de la lógica) ---
-    // (Este es un placeholder, el código completo se incluirá en la versión final)
-    const showTitleConfigModal = () => alert("Función 'Título' en construcción");
-    const showIntroductionConfigModal = () => alert("Función 'Introducción' en construcción");
-    const showBiographyConfigModal = () => alert("Función 'Biografía' en construcción");
-    const applyForumDiscussionFormatting = () => alert("Función 'Foro' en construcción");
-    const showFaqConfigModal = () => alert("Función 'FAQs' en construcción");
+    // --- Lógica de Bloque de Introducción ---
+    // (Incluir aquí toda la lógica de showIntroductionConfigModal y sus helpers)
+
+    // --- Lógica de Bloque de Biografía ---
+    // (Incluir aquí toda la lógica de showBiographyConfigModal y sus helpers)
+
+    // --- Lógica de Bloque de FAQs ---
+    // (Incluir aquí toda la lógica de showFaqConfigModal y sus helpers)
+    
+    // --- Lógica de Bloque de Foro ---
+    // (Incluir aquí toda la lógica de applyForumDiscussionFormatting y sus helpers)
 
     // API Pública
     return {

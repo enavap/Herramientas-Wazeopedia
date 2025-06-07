@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      6.0.0
+// @version      6.1.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
-// @require      https://update.greasyfork.org/scripts/538610/1603498/Wazeopedia%20Core%20UI%20Library.js
-// @require      https://update.greasyfork.org/scripts/538615/1603501/Wazeopedia%20Blocks-Library.js
+// @require      https://update.greasyfork.org/scripts/538610/1603505/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538615/1603508/Wazeopedia%20Blocks-Library.js
 // @grant        GM_info
 // @license      MIT
 // ==/UserScript==
@@ -14,20 +14,16 @@
 (function() {
     'use strict';
 
-    // Función de inicialización que se asegura de que todo esté cargado
     function initializeTools() {
-        // Comprobación de seguridad: esperar a que las bibliotecas estén definidas en window
         if (typeof window.WazeopediaUI === 'undefined' || typeof window.WazeopediaBlocks === 'undefined') {
             console.error('Herramientas Wazeopedia: Esperando a que las bibliotecas se carguen...');
-            setTimeout(initializeTools, 100); // Reintentar en 100ms
+            setTimeout(initializeTools, 100);
             return;
         }
 
-        // Una vez cargadas, podemos usarlas de forma segura
         const UI = window.WazeopediaUI;
         const Blocks = window.WazeopediaBlocks;
 
-        // --- ESTRUCTURA DE DATOS PARA PLANTILLAS DE TOC ---
         const tocTemplates = {
             laneGuidance: { title: "GUIAS DE CARRIL", structure: ["1. Introducción", "2. Trabajando con guías de carril", "2.1. Creación", "2.2. Asignación de carriles", "2.3. Modificación de giros", "2.4. Instrucciones proporcionadas por Waze", "2.5. Instrucciones forzadas de giro", "3. Criterios para utilizar la guía de carril", "3.1. Autopistas y autovías", "3.2. Vías de servicio", "3.3. Carreteras", "3.4. Vías urbanas", "4. Dónde no utilizar una guía de carril", "5. Otras consideraciones", "6. Biografía y Enlaces", "7. Foro de discusión"] },
             tolls: { title: "PEAJES", structure: ["1. Introducción", "2. Restricciones en la edición de peajes", "3. Navegación y Penalizaciones por Peajes", "4. Gestión y Precios de Peajes", "5. Preguntas Frecuentes", "6. Biografía y Enlaces", "7. Foro de discusión"] },
@@ -36,7 +32,6 @@
             gasStations: { title: "ESTACIONES DE GAS", structure: ["1. Introducción", "2. Trabajando con las estaciones de gas", "3. Consideraciones a tener en cuenta", "4. Creando nuevas estaciones de gas", "4.1. Qué información debemos verificar:", "4.2. Como las nombramos", "5. Editando estaciones de gas", "5.1. Establecer opciones", "5.1.1. General", "5.1.2. Más información", "5.2. Consideraciones a la hora de editar una estación de gas", "6. Biografía y Enlaces", "7. Foro de discusión"] }
         };
 
-        // --- CONFIGURACIÓN DE BOTONES ---
         const buttonConfigs = [
             { id: 'wz-btn-toc', text: 'TOC', title: 'Mostrar guía de Tabla de Contenidos', action: (textarea) => UI.showTocGuideModal(textarea, tocTemplates) },
             { id: 'wz-btn-hr', text: '---', title: 'Insertar línea horizontal', action: UI.applyHrFormatting },
@@ -64,7 +59,6 @@
             }
         ];
 
-        // --- MONTAJE E INICIALIZACIÓN ---
         function addCustomButtons() {
             const editorToolbar = document.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar, .editor-toolbar');
             if (!editorToolbar || editorToolbar.querySelector('.wz-button-container')) return;
@@ -76,17 +70,16 @@
             const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
             if (!textarea) return;
 
-            document.addEventListener('click', UI.closeAllDropdowns);
-
             buttonConfigs.forEach(config => {
                 if (config.isDropdown) {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'wz-dropdown';
                     const content = document.createElement('div');
                     content.className = 'wz-dropdown-content';
+                    // CORRECCIÓN AQUÍ: la llamada a toggleDropdown ahora es correcta
                     const btn = UI.createButton(config.text, 'wz-custom-button btn wz-dropdown-toggle', e => {
                         e.stopPropagation();
-                        UI.toggleDropdown(content);
+                        UI.toggleDropdown(content); // <-- Llamada corregida
                     });
                     btn.id = config.id;
                     btn.title = config.title;
@@ -133,7 +126,6 @@
         console.log(`Herramientas Wazeopedia ${GM_info.script.version} initialized successfully.`);
     }
 
-    // Iniciar todo el proceso.
     initializeTools();
 
 })();

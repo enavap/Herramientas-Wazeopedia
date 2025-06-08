@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Content Library
 // @namespace    http://tampermonkey.net/
-// @version      9.0.2.1
+// @version      9.0.2.2
 // @description  Biblioteca de contenido (textos, plantillas, URLs) para las herramientas de Wazeopedia.
 // @author       Annthizze
 // @license      MIT
@@ -17,5 +17,5 @@
         FORUM_BLOCK: { IDENTIFIER: "# [wzh=1]Foro de discusión:[/wzh]", IMAGE: "[center]![image|128x128, 50%](upload://2cmYNNfUCAykbh8vW92usPC9Sf3.png)[/center]", BODY_TEMPLATE: (pageLink) => `Hola editores,\n\nHe leído la información en la Wazeopedia y me gustaría hacer una sugerencia o proponer un cambio relacionado con la información contenida en la pagina de ${pageLink}. A continuación detallaré mi idea, error o modificación:\n\n< Pon aquí tu sugerencia, error o cambio >`, LINK_TEXT_TEMPLATE: `Si observas cualquier tipo de error en la información aquí contenida, así como si deseas mejorarla o incluso solicitar algún tipo de cambio en los criterios para su uso, puedes informar en el foro correspondiente <a rel="nofollow" class="external text" href="{{NEW_TOPIC_URL}}">→aquí←</a>` },
         FAQ_BLOCK: { HEADER: "# [wzh=1]Preguntas Frecuentes[/wzh]" }
     };
-    console.log('Wazeopedia Content Library v9.0.2.1 loaded.');
+    console.log('Wazeopedia Content Library v9.0.2.2 loaded.');
 })();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      7.0.0
+// @version      7.0.1
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
@@ -15,14 +15,8 @@
 (function() {
     'use strict';
 
-    window.wazeopediaToolInitializer = function() {
-        if (typeof window.WazeopediaUI === 'undefined' || typeof window.WazeopediaBlocks === 'undefined' || typeof window.WazeopediaContent === 'undefined') {
-            return;
-        }
-        
-        if (document.body.dataset.wazeopediaInitialized) {
-            return;
-        }
+    function runApplication() {
+        if (document.body.dataset.wazeopediaInitialized) return;
         document.body.dataset.wazeopediaInitialized = 'true';
 
         const UI = window.WazeopediaUI;
@@ -62,7 +56,6 @@
                 }
             });
         }
-
         function applyTheme() { const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; document.body.classList.toggle('wz-dark-mode', isDark); }
         const editorObserver = new MutationObserver(addCustomButtons);
         editorObserver.observe(document.body, { childList: true, subtree: true });
@@ -70,11 +63,19 @@
         addCustomButtons();
         applyTheme();
         console.log(`Herramientas Wazeopedia ${GM_info.script.version} initialized successfully.`);
-    };
+    }
+
+    function checkDependencies() {
+        if (window.WazeopediaUI && window.WazeopediaBlocks && window.WazeopediaContent) {
+            runApplication();
+        } else {
+            setTimeout(checkDependencies, 50); // Reintentar en 50ms
+        }
+    }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', window.wazeopediaToolInitializer);
+        document.addEventListener('DOMContentLoaded', checkDependencies);
     } else {
-        window.wazeopediaToolInitializer();
+        checkDependencies();
     }
 })();

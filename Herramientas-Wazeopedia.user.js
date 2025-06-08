@@ -69,7 +69,6 @@
         if (window.WazeopediaUI && window.WazeopediaBlocks && window.WazeopediaContent) {
             runApplication();
         } else {
-            // Este log te ayudará a ver si alguna biblioteca específica está tardando en cargar
             console.log('Herramientas Wazeopedia: Esperando dependencias...');
             setTimeout(checkDependencies, 50);
         }

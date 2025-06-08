@@ -26,27 +26,26 @@
         function ensureProperSpacing(currentText, newBlockText, position, relativeBlockData) { let before = "", after = "", middle = newBlockText; const twoNewlines = "\n\n"; switch (position) { case 'start': before = ""; after = currentText; if (after.trim().length > 0 && !middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); } else if (after.trim().length > 0 && middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; } break; case 'end': before = currentText; after = ""; if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && !before.endsWith("\n")) { middle = (before.endsWith("\n") ? "\n" : twoNewlines) + middle; } else if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && before.endsWith("\n") && !before.endsWith(twoNewlines) ){ middle = "\n" + middle; } break; case 'afterRelative': if (!relativeBlockData) return ensureProperSpacing(currentText, newBlockText, 'start'); before = currentText.substring(0, relativeBlockData.endIndex); after = currentText.substring(relativeBlockData.endIndex); if (!before.endsWith(twoNewlines) && !before.endsWith("\n")) middle = twoNewlines + middle; else if (before.endsWith("\n") && !before.endsWith(twoNewlines) && !middle.startsWith("\n")) middle = "\n" + middle; if (after.trim().length > 0 && !middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); } else if (after.trim().length > 0 && middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; } break; default: return { textToInsert: newBlockText.trim(), cursorPosition: newBlockText.trim().length }; } return { textToInsert: before + middle + after, cursorPosition: (before + middle).length }; }
         function parseExistingTitleBlock(editorText) { if (!editorText.startsWith(Content.TITLE_BLOCK.TOC_MARKER)) return null; const wzBoxStartIndex = editorText.indexOf(Content.TITLE_BLOCK.WZBOX_START); if (wzBoxStartIndex === -1) return null; const wzBoxEndIndex = editorText.indexOf(Content.TITLE_BLOCK.WZBOX_END, wzBoxStartIndex); if (wzBoxEndIndex === -1) return null; const content = editorText.substring(wzBoxStartIndex + Content.TITLE_BLOCK.WZBOX_START.length, wzBoxEndIndex); const titleMatch = content.match(/\[center\]\[wzh=1\](.*?)\[\/wzh\]\[\/center\]/); const title = titleMatch ? titleMatch[1].trim() : ""; let statusKey = "aprobado", forumUrl = ""; for (const key in TITLE_STATUS_OPTIONS) { if (content.includes(TITLE_STATUS_OPTIONS[key].text.split('***')[1])) { statusKey = key; if (TITLE_STATUS_OPTIONS[key].requiresUrl) { const urlMatch = content.match(/\[→foro←\]\(([^)]+)\)/); forumUrl = urlMatch ? urlMatch[1] : ""; } break; } } return { title, statusKey, forumUrl, startIndex: 0, endIndex: wzBoxEndIndex + Content.TITLE_BLOCK.WZBOX_END.length }; }
         function parseExistingIntroductionBlock(editorText) { const fullHeaderSearchIndex = editorText.indexOf(Content.INTRO_BLOCK.HEADER); if (fullHeaderSearchIndex === -1) return null; const contentStartAfterFullHeader = fullHeaderSearchIndex + Content.INTRO_BLOCK.HEADER.length; if (!editorText.substring(contentStartAfterFullHeader).startsWith("\n\n")) return null; const actualMainTextStartIndex = contentStartAfterFullHeader + 2; let endOfBlockIndex = editorText.indexOf("\n\n---", actualMainTextStartIndex); if(endOfBlockIndex === -1) return null; const blockContentBetween = editorText.substring(actualMainTextStartIndex, endOfBlockIndex); let mainText = blockContentBetween, noteText = "", additionalText = "", hasNote = false, hasAdditional = false; const noteBlockPattern = "\n\n" + Content.INTRO_BLOCK.NOTE_PREFIX; const noteStartIndex = blockContentBetween.indexOf(noteBlockPattern); if (noteStartIndex !== -1) { hasNote = true; mainText = blockContentBetween.substring(0, noteStartIndex).trim(); const afterNotePrefix = blockContentBetween.substring(noteStartIndex + noteBlockPattern.length); const additionalTextSeparator = "\n\n"; const additionalTextIndex = afterNotePrefix.indexOf(additionalTextSeparator); if (additionalTextIndex !== -1) { noteText = afterNotePrefix.substring(0, additionalTextIndex).trim(); additionalText = afterNotePrefix.substring(additionalTextIndex + additionalTextSeparator.length).trim(); if (additionalText) hasAdditional = true; } else { noteText = afterNotePrefix.trim(); } } else { mainText = blockContentBetween.trim(); } return { mainText, noteText, additionalText, hasNote, hasAdditional, startIndex: fullHeaderSearchIndex, endIndex: endOfBlockIndex + "\n\n---".length }; }
-
-        // *** CORRECCIÓN 1: Lógica de fechas refinada y centralizada ***
+        
         const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'].join('|');
-        const dateRegexDayMonthYear = new RegExp(`^(3[01]|[12][0-9]|0?[1-9]) de (${MONTHS_ES}) de (\\d{4})`, 'i');
-        const dateRegexMonthYear = new RegExp(`^(${MONTHS_ES}) de (\\d{4})`, 'i');
-        const dateRegexYear = /^\d{4}$/;
+        const dateRegexDayMonthYear = new RegExp(`^((3[01]|[12][0-9]|0?[1-9]) de (${MONTHS_ES}) de (\\d{4}))`, 'i');
+        const dateRegexMonthYear = new RegExp(`^((?:${MONTHS_ES}) de (\\d{4}))`, 'i');
+        const dateRegexYear = /^(\d{4})/;
 
         function isValidBioDate(dateText) {
             const text = dateText.trim();
-            return dateRegexDayMonthYear.test(text) || dateRegexMonthYear.test(text) || dateRegexYear.test(text);
+            return dateRegexDayMonthYear.test(text) || dateRegexMonthYear.test(text) || /^\d{4}$/.test(text);
         }
 
         function getBioEntryPrefix(dateText) {
             const text = (dateText || "").trim().toLowerCase();
             if (dateRegexDayMonthYear.test(text)) return "El ";
             if (dateRegexMonthYear.test(text)) return "En ";
-            if (dateRegexYear.test(text)) return "En el año ";
+            if (/^\d{4}$/.test(text)) return "En el año ";
             return "";
         }
-
-        // *** CORRECCIÓN 2: Parseo robusto que no mezcla campos ***
+        
+        // *** CORRECCIÓN FINAL: Parseo definitivo de Biografía ***
         function parseExistingBiographyBlock(editorText) {
             const blockStartIndex = editorText.indexOf(Content.BIO_BLOCK.HEADER);
             if (blockStartIndex === -1) return null;
@@ -67,29 +66,28 @@
                     if (linkMatch) {
                         entries.push({ dateText: linkMatch[1], url: linkMatch[2], description: linkMatch[3].replace(/\.$/, '') });
                     } else {
-                        // Lógica sin URL: ahora separa correctamente fecha de descripción
                         let dateText = '';
-                        let description = core;
+                        let description = '';
                         
                         const dmyMatch = core.match(dateRegexDayMonthYear);
                         const myMatch = core.match(dateRegexMonthYear);
                         const yMatch = core.match(dateRegexYear);
 
-                        let foundMatch = null;
-                        if (dmyMatch && core.startsWith(dmyMatch[0])) foundMatch = dmyMatch[0];
-                        else if (myMatch && core.startsWith(myMatch[0])) foundMatch = myMatch[0];
-                        else if (yMatch && core.startsWith(yMatch[0])) foundMatch = yMatch[0];
-
-                        if (foundMatch) {
-                            dateText = foundMatch;
-                            description = core.substring(foundMatch.length).trim();
+                        if (dmyMatch) {
+                            dateText = dmyMatch[1];
+                            description = core.substring(dateText.length).trim();
+                        } else if (myMatch) {
+                            dateText = myMatch[1];
+                            description = core.substring(dateText.length).trim();
+                        } else if (yMatch) {
+                            dateText = yMatch[1];
+                            description = core.substring(dateText.length).trim();
                         } else {
-                            // Si no hay formato de fecha reconocido, no se divide nada.
-                            // Esto previene el error. Asumimos que es una fecha no estándar y una descripción vacía.
+                            // Si no se reconoce un formato de fecha, se asume que todo es la fecha (caso borde)
                             dateText = core;
                             description = '';
                         }
-                        entries.push({ dateText: dateText, url: '', description: description.replace(/\.$/, '') });
+                        entries.push({ dateText, url: '', description: description.replace(/\.$/, '') });
                     }
                 });
             }
@@ -112,7 +110,7 @@ ${Content.FORUM_BLOCK.LINK_TEXT_TEMPLATE.replace('{{NEW_TOPIC_URL}}', newTopicUr
             showBiographyConfigModal: function(textarea) {
                 UI.closeAllModals();
                 const existingBlock = parseExistingBiographyBlock(textarea.value);
-                const entries = existingBlock ? (existingBlock.entries.length > 0 ? existingBlock.entries : [{ dateText: '', url: '', description: '' }]) : [{ dateText: '', url: '', description: '' }];
+                const entries = existingBlock && existingBlock.entries.length > 0 ? existingBlock.entries : [{ dateText: '', url: '', description: '' }];
                 const overlay = document.createElement('div'); overlay.className = 'wz-modal-overlay';
                 const modalContent = document.createElement('div'); modalContent.className = 'wz-modal-content';
                 modalContent.innerHTML = `<h3>Configurar Biografía y Enlaces</h3><div class="wz-bio-modal-error" style="display:none;"></div><div class="wz-modal-scrollable-content"><div id="wz-bio-entry-list"></div></div>`;
@@ -166,5 +164,5 @@ ${Content.FORUM_BLOCK.LINK_TEXT_TEMPLATE.replace('{{NEW_TOPIC_URL}}', newTopicUr
     })();
 
     if (window.WazeopediaBlocks) { console.warn('Wazeopedia Blocks Library está siendo cargada de nuevo.'); }
-    else { window.WazeopediaBlocks = WazeopediaBlocks; console.log('Wazeopedia Blocks Library 6.4.3 loaded.'); }
+    else { window.WazeopediaBlocks = WazeopediaBlocks; console.log('Wazeopedia Blocks Library 6.4.4 loaded.'); }
 })();

@@ -5,9 +5,9 @@
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
-// @require      https://update.greasyfork.org/scripts/538610/1603597/Wazeopedia%20Core%20UI%20Library.js
-// @require      https://update.greasyfork.org/scripts/538744/1603596/Wazeopedia%20Content%20Library.js
-// @require      https://update.greasyfork.org/scripts/538615/1603598/Wazeopedia%20Blocks-Library.js
+// @require      https://update.greasyfork.org/scripts/538610/Wazeopedia%20Core%20UI%20Library.js
+// @require      https://update.greasyfork.org/scripts/538744/Wazeopedia%20Content%20Library.js
+// @require      https://update.greasyfork.org/scripts/538615/Wazeopedia%20Blocks-Library.js
 // @grant        GM_info
 // @license      MIT
 // ==/UserScript==

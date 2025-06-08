@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      7.0.3
+// @version      8.0.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
@@ -65,18 +65,11 @@
         console.log(`Herramientas Wazeopedia ${GM_info.script.version} initialized successfully.`);
     }
 
-    function checkDependencies() {
+    (function checkDependencies() {
         if (window.WazeopediaUI && window.WazeopediaBlocks && window.WazeopediaContent) {
             runApplication();
         } else {
-            console.log('Herramientas Wazeopedia: Esperando dependencias...');
             setTimeout(checkDependencies, 50);
         }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkDependencies);
-    } else {
-        checkDependencies();
-    }
+    })();
 })();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Blocks Library
 // @namespace    http://tampermonkey.net/
-// @version      6.4.3
+// @version      6.4.4
 // @description  Biblioteca de lógica para bloques de contenido de Wazeopedia (Título, Bio, FAQ, etc.).
 // @author       Annthizze
 // @require      https://update.greasyfork.org/scripts/538610/Wazeopedia%20Core%20UI%20Library.js
@@ -23,30 +23,30 @@
         const FORUM_BLOCK_REGEX_STR = `(?:^|\\n)---` + `\\s*${Content.FORUM_BLOCK.IMAGE.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}` + `\\s*${Content.FORUM_BLOCK.IDENTIFIER.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}` + `[\\s\\S]*?` + `href="https://www\\.waze\\.com/discuss/new-topic\\?category=spain-usuarios-y-editores/wazeopedia-es/4779[^"]*">→aquí←</a>`;
         const FAQ_BLOCK_REGEX = /(?:^|\n)---\s*\n+# \[wzh=1\]Preguntas Frecuentes\[\/wzh\]\s*\n+([\s\S]*?)\n+---\s*(?:\n|$)/;
         
-        // --- HELPERS (la mayoría sin cambios) ---
         function ensureProperSpacing(currentText, newBlockText, position, relativeBlockData) { let before = "", after = "", middle = newBlockText; const twoNewlines = "\n\n"; switch (position) { case 'start': before = ""; after = currentText; if (after.trim().length > 0 && !middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); } else if (after.trim().length > 0 && middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; } break; case 'end': before = currentText; after = ""; if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && !before.endsWith("\n")) { middle = (before.endsWith("\n") ? "\n" : twoNewlines) + middle; } else if (before.trim().length > 0 && !middle.startsWith(twoNewlines) && before.endsWith("\n") && !before.endsWith(twoNewlines) ){ middle = "\n" + middle; } break; case 'afterRelative': if (!relativeBlockData) return ensureProperSpacing(currentText, newBlockText, 'start'); before = currentText.substring(0, relativeBlockData.endIndex); after = currentText.substring(relativeBlockData.endIndex); if (!before.endsWith(twoNewlines) && !before.endsWith("\n")) middle = twoNewlines + middle; else if (before.endsWith("\n") && !before.endsWith(twoNewlines) && !middle.startsWith("\n")) middle = "\n" + middle; if (after.trim().length > 0 && !middle.endsWith(twoNewlines) && !after.startsWith("\n")) { middle += (middle.endsWith("\n") ? "\n" : twoNewlines); } else if (after.trim().length > 0 && middle.endsWith("\n") && !middle.endsWith(twoNewlines) && !after.startsWith("\n")){ middle += "\n"; } break; default: return { textToInsert: newBlockText.trim(), cursorPosition: newBlockText.trim().length }; } return { textToInsert: before + middle + after, cursorPosition: (before + middle).length }; }
         function parseExistingTitleBlock(editorText) { if (!editorText.startsWith(Content.TITLE_BLOCK.TOC_MARKER)) return null; const wzBoxStartIndex = editorText.indexOf(Content.TITLE_BLOCK.WZBOX_START); if (wzBoxStartIndex === -1) return null; const wzBoxEndIndex = editorText.indexOf(Content.TITLE_BLOCK.WZBOX_END, wzBoxStartIndex); if (wzBoxEndIndex === -1) return null; const content = editorText.substring(wzBoxStartIndex + Content.TITLE_BLOCK.WZBOX_START.length, wzBoxEndIndex); const titleMatch = content.match(/\[center\]\[wzh=1\](.*?)\[\/wzh\]\[\/center\]/); const title = titleMatch ? titleMatch[1].trim() : ""; let statusKey = "aprobado", forumUrl = ""; for (const key in TITLE_STATUS_OPTIONS) { if (content.includes(TITLE_STATUS_OPTIONS[key].text.split('***')[1])) { statusKey = key; if (TITLE_STATUS_OPTIONS[key].requiresUrl) { const urlMatch = content.match(/\[→foro←\]\(([^)]+)\)/); forumUrl = urlMatch ? urlMatch[1] : ""; } break; } } return { title, statusKey, forumUrl, startIndex: 0, endIndex: wzBoxEndIndex + Content.TITLE_BLOCK.WZBOX_END.length }; }
         function parseExistingIntroductionBlock(editorText) { const fullHeaderSearchIndex = editorText.indexOf(Content.INTRO_BLOCK.HEADER); if (fullHeaderSearchIndex === -1) return null; const contentStartAfterFullHeader = fullHeaderSearchIndex + Content.INTRO_BLOCK.HEADER.length; if (!editorText.substring(contentStartAfterFullHeader).startsWith("\n\n")) return null; const actualMainTextStartIndex = contentStartAfterFullHeader + 2; let endOfBlockIndex = editorText.indexOf("\n\n---", actualMainTextStartIndex); if(endOfBlockIndex === -1) return null; const blockContentBetween = editorText.substring(actualMainTextStartIndex, endOfBlockIndex); let mainText = blockContentBetween, noteText = "", additionalText = "", hasNote = false, hasAdditional = false; const noteBlockPattern = "\n\n" + Content.INTRO_BLOCK.NOTE_PREFIX; const noteStartIndex = blockContentBetween.indexOf(noteBlockPattern); if (noteStartIndex !== -1) { hasNote = true; mainText = blockContentBetween.substring(0, noteStartIndex).trim(); const afterNotePrefix = blockContentBetween.substring(noteStartIndex + noteBlockPattern.length); const additionalTextSeparator = "\n\n"; const additionalTextIndex = afterNotePrefix.indexOf(additionalTextSeparator); if (additionalTextIndex !== -1) { noteText = afterNotePrefix.substring(0, additionalTextIndex).trim(); additionalText = afterNotePrefix.substring(additionalTextIndex + additionalTextSeparator.length).trim(); if (additionalText) hasAdditional = true; } else { noteText = afterNotePrefix.trim(); } } else { mainText = blockContentBetween.trim(); } return { mainText, noteText, additionalText, hasNote, hasAdditional, startIndex: fullHeaderSearchIndex, endIndex: endOfBlockIndex + "\n\n---".length }; }
-        
-        // *** CORRECCIÓN 1: Lógica de prefijos y validación de fecha ***
-        const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-        const dateRegexDayMonthYear = new RegExp(`^(3[01]|[12][0-9]|0?[1-9]) de (${MONTHS_ES.join('|')}) de (\\d{4})$`, 'i');
-        const dateRegexMonthYear = new RegExp(`^(${MONTHS_ES.join('|')}) de (\\d{4})$`, 'i');
+
+        // *** CORRECCIÓN 1: Lógica de fechas refinada y centralizada ***
+        const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'].join('|');
+        const dateRegexDayMonthYear = new RegExp(`^(3[01]|[12][0-9]|0?[1-9]) de (${MONTHS_ES}) de (\\d{4})`, 'i');
+        const dateRegexMonthYear = new RegExp(`^(${MONTHS_ES}) de (\\d{4})`, 'i');
         const dateRegexYear = /^\d{4}$/;
-        
+
         function isValidBioDate(dateText) {
-            return dateRegexDayMonthYear.test(dateText) || dateRegexMonthYear.test(dateText) || dateRegexYear.test(dateText);
+            const text = dateText.trim();
+            return dateRegexDayMonthYear.test(text) || dateRegexMonthYear.test(text) || dateRegexYear.test(text);
         }
 
         function getBioEntryPrefix(dateText) {
-            dateText = (dateText || "").trim().toLowerCase();
-            if (dateRegexDayMonthYear.test(dateText)) return "El ";
-            if (dateRegexMonthYear.test(dateText)) return "En ";
-            if (dateRegexYear.test(dateText)) return "En el año ";
-            return ""; // Sin prefijo si no coincide o es inválido
+            const text = (dateText || "").trim().toLowerCase();
+            if (dateRegexDayMonthYear.test(text)) return "El ";
+            if (dateRegexMonthYear.test(text)) return "En ";
+            if (dateRegexYear.test(text)) return "En el año ";
+            return "";
         }
-        
-        // *** CORRECCIÓN 2: Parseo robusto de biografía ***
+
+        // *** CORRECCIÓN 2: Parseo robusto que no mezcla campos ***
         function parseExistingBiographyBlock(editorText) {
             const blockStartIndex = editorText.indexOf(Content.BIO_BLOCK.HEADER);
             if (blockStartIndex === -1) return null;
@@ -61,47 +61,35 @@
                     if (!line.startsWith('* ')) return;
                     let core = line.substring(2).trim();
                     const prefixMatch = core.match(/^(?:El |En el año |En )/);
-                    if (prefixMatch) {
-                        core = core.substring(prefixMatch[0].length);
-                    }
+                    if (prefixMatch) { core = core.substring(prefixMatch[0].length); }
                     
                     const linkMatch = core.match(/^\[([^\]]+)\]\(([^)]+)\)\s*(.*)/);
                     if (linkMatch) {
                         entries.push({ dateText: linkMatch[1], url: linkMatch[2], description: linkMatch[3].replace(/\.$/, '') });
                     } else {
-                        // Caso sin URL: Intentamos extraer la fecha con los formatos conocidos
+                        // Lógica sin URL: ahora separa correctamente fecha de descripción
                         let dateText = '';
                         let description = core;
                         
                         const dmyMatch = core.match(dateRegexDayMonthYear);
-                        if (dmyMatch) {
-                            dateText = dmyMatch[0];
-                            description = core.substring(dateText.length).trim();
+                        const myMatch = core.match(dateRegexMonthYear);
+                        const yMatch = core.match(dateRegexYear);
+
+                        let foundMatch = null;
+                        if (dmyMatch && core.startsWith(dmyMatch[0])) foundMatch = dmyMatch[0];
+                        else if (myMatch && core.startsWith(myMatch[0])) foundMatch = myMatch[0];
+                        else if (yMatch && core.startsWith(yMatch[0])) foundMatch = yMatch[0];
+
+                        if (foundMatch) {
+                            dateText = foundMatch;
+                            description = core.substring(foundMatch.length).trim();
                         } else {
-                            const myMatch = core.match(dateRegexMonthYear);
-                            if (myMatch) {
-                                dateText = myMatch[0];
-                                description = core.substring(dateText.length).trim();
-                            } else {
-                                const yMatch = core.match(dateRegexYear);
-                                if (yMatch && core.substring(0,5).includes(yMatch[0])) { // Asegurarnos que está al principio
-                                    dateText = yMatch[0];
-                                    description = core.substring(dateText.length).trim();
-                                }
-                            }
+                            // Si no hay formato de fecha reconocido, no se divide nada.
+                            // Esto previene el error. Asumimos que es una fecha no estándar y una descripción vacía.
+                            dateText = core;
+                            description = '';
                         }
-                        
-                        if (dateText) {
-                            entries.push({ dateText: dateText, url: '', description: description.replace(/\.$/, '') });
-                        } else {
-                             // Si no se reconoce formato de fecha, se asume que todo es descripción con una "fecha" de una palabra
-                            const spaceIndex = core.indexOf(' ');
-                            if (spaceIndex > -1) {
-                                entries.push({ dateText: core.substring(0, spaceIndex), url: '', description: core.substring(spaceIndex + 1).replace(/\.$/, '') });
-                            } else {
-                                entries.push({ dateText: core.replace(/\.$/, ''), url: '', description: '' });
-                            }
-                        }
+                        entries.push({ dateText: dateText, url: '', description: description.replace(/\.$/, '') });
                     }
                 });
             }
@@ -121,44 +109,62 @@ ${Content.FORUM_BLOCK.LINK_TEXT_TEMPLATE.replace('{{NEW_TOPIC_URL}}', newTopicUr
         return {
             showTitleConfigModal: function(textarea) { UI.closeAllModals(); const existingData = parseExistingTitleBlock(textarea.value); const initial = existingData || { title: "", statusKey: "aprobado", forumUrl: "" }; const overlay = document.createElement('div'); overlay.className = 'wz-modal-overlay'; const modalContent = document.createElement('div'); modalContent.className = 'wz-modal-content'; modalContent.innerHTML = `<h3>Configurar Título y Estado</h3><div class="wz-modal-scrollable-content"><div class="wz-title-modal-error" style="display:none;"></div><label for="wz-title-main">Título Artículo:</label><input type="text" id="wz-title-main" value="${initial.title}"><label for="wz-title-status-select">Estado Artículo:</label><select id="wz-title-status-select">${Object.keys(TITLE_STATUS_OPTIONS).map(k => `<option value="${k}" ${initial.statusKey === k ? 'selected' : ''}>${TITLE_STATUS_OPTIONS[k].label}</option>`).join('')}</select><div id="wz-title-forum-url-section" style="display: ${TITLE_STATUS_OPTIONS[initial.statusKey]?.requiresUrl ? 'block' : 'none'};"><label for="wz-title-forum-url">URL Foro:</label><input type="text" id="wz-title-forum-url" placeholder="https://..." value="${initial.forumUrl}"></div></div>`; const errorDiv = modalContent.querySelector('.wz-title-modal-error'), titleInput = modalContent.querySelector('#wz-title-main'), statusSelect = modalContent.querySelector('#wz-title-status-select'), forumUrlSection = modalContent.querySelector('#wz-title-forum-url-section'), forumUrlInput = modalContent.querySelector('#wz-title-forum-url'); statusSelect.onchange = () => forumUrlSection.style.display = TITLE_STATUS_OPTIONS[statusSelect.value]?.requiresUrl ? 'block' : 'none'; const buttonsDiv = document.createElement('div'); buttonsDiv.className = 'wz-modal-buttons'; const saveBtn = UI.createButton(existingData ? 'Actualizar Bloque' : 'Insertar Bloque', 'wz-confirm', () => { const title = titleInput.value.trim(), statusKey = statusSelect.value, forumUrl = forumUrlInput.value.trim(); if (!title) { errorDiv.textContent = "Título no puede estar vacío."; errorDiv.style.display = 'block'; return; } if (TITLE_STATUS_OPTIONS[statusKey]?.requiresUrl && !forumUrl) { errorDiv.textContent = 'URL de foro requerida.'; errorDiv.style.display = 'block'; return; } const statusText = TITLE_STATUS_OPTIONS[statusKey].text.replace("{{FORUM_URL}}", forumUrl); const newBlock = [Content.TITLE_BLOCK.TOC_MARKER, `\n\n${Content.TITLE_BLOCK.WZBOX_START}\n`, Content.TITLE_BLOCK.IMAGE, `\n[center][wzh=1]${title}[/wzh][/center]\n\n`, statusText, `\n${Content.TITLE_BLOCK.WZBOX_END}`].join(''); if (existingData) { textarea.value = newBlock + textarea.value.substring(existingData.endIndex); } else { const { textToInsert, cursorPosition } = ensureProperSpacing(textarea.value, newBlock, 'start'); textarea.value = textToInsert; textarea.selectionStart = textarea.selectionEnd = cursorPosition; } UI.closeAllModals(); }); buttonsDiv.append(UI.createButton('Cancelar', 'wz-cancel', UI.closeAllModals), saveBtn); modalContent.querySelector('.wz-modal-scrollable-content').after(buttonsDiv); overlay.appendChild(modalContent); document.body.appendChild(overlay); UI.setupModalEscape(overlay); setTimeout(() => titleInput.focus(), 100); },
             showIntroductionConfigModal: function(textarea) { UI.closeAllModals(); const existingBlockData = parseExistingIntroductionBlock(textarea.value); const initialData = existingBlockData || { mainText: "", noteText: "", additionalText: "", hasNote: false, hasAdditional: false }; const overlay = document.createElement('div'); overlay.className = 'wz-modal-overlay'; const content = document.createElement('div'); content.className = 'wz-modal-content'; content.innerHTML = `<h3>Configurar Bloque de Introducción</h3><div class="wz-modal-scrollable-content"><label for="wz-intro-main">Texto Principal:</label><textarea id="wz-intro-main"></textarea><div class="wz-checkbox-group"><input type="checkbox" id="wz-intro-add-note-check"><label for="wz-intro-add-note-check">Añadir nota</label></div><div id="wz-intro-note-section" class="wz-hidden-section"><label for="wz-intro-note">Texto de Nota (${Content.INTRO_BLOCK.NOTE_PREFIX.trim()} se añadirá):</label><textarea id="wz-intro-note" placeholder="Ej: Edición limitada..."></textarea></div><div class="wz-checkbox-group"><input type="checkbox" id="wz-intro-add-additional-check"><label for="wz-intro-add-additional-check">Añadir texto adicional</label></div><div id="wz-intro-additional-section" class="wz-hidden-section"><label for="wz-intro-additional">Texto Adicional:</label><textarea id="wz-intro-additional"></textarea></div></div>`; const mainTextEl = content.querySelector('#wz-intro-main'), addNoteCheckEl = content.querySelector('#wz-intro-add-note-check'), noteSectionEl = content.querySelector('#wz-intro-note-section'), noteTextEl = content.querySelector('#wz-intro-note'), addAdditionalCheckEl = content.querySelector('#wz-intro-add-additional-check'), additionalSectionEl = content.querySelector('#wz-intro-additional-section'), additionalTextEl = content.querySelector('#wz-intro-additional'); mainTextEl.value = initialData.mainText; noteTextEl.value = initialData.noteText; additionalTextEl.value = initialData.additionalText; addNoteCheckEl.checked = initialData.hasNote; if (initialData.hasNote) noteSectionEl.style.display = 'block'; addNoteCheckEl.onchange = () => noteSectionEl.style.display = addNoteCheckEl.checked ? 'block' : 'none'; addAdditionalCheckEl.checked = initialData.hasAdditional; if (initialData.hasAdditional) additionalSectionEl.style.display = 'block'; addAdditionalCheckEl.onchange = () => additionalSectionEl.style.display = addAdditionalCheckEl.checked ? 'block' : 'none'; const buttonsDiv = document.createElement('div'); buttonsDiv.className = 'wz-modal-buttons'; const saveBtn = UI.createButton(existingBlockData ? 'Actualizar Bloque' : 'Insertar Bloque', 'wz-confirm', () => { let blockParts = [Content.INTRO_BLOCK.HEADER, "\n\n" + mainTextEl.value.trim()]; if (addNoteCheckEl.checked) blockParts.push("\n\n" + Content.INTRO_BLOCK.NOTE_PREFIX + noteTextEl.value.trim()); if (addAdditionalCheckEl.checked) blockParts.push("\n\n" + additionalTextEl.value.trim()); blockParts.push("\n\n---"); const finalBlock = blockParts.join(''); if (existingBlockData) { textarea.value = textarea.value.substring(0, existingBlockData.startIndex) + finalBlock + textarea.value.substring(existingBlockData.endIndex); } else { const titleBlockData = parseExistingTitleBlock(textarea.value); const { textToInsert, cursorPosition } = ensureProperSpacing(textarea.value, finalBlock, titleBlockData ? 'afterRelative' : 'start', titleBlockData); textarea.value = textToInsert; textarea.selectionStart = textarea.selectionEnd = cursorPosition; } textarea.focus(); textarea.dispatchEvent(new Event('input', { bubbles: true, cancelable: true })); UI.closeAllModals(); }); buttonsDiv.append(UI.createButton('Cancelar', 'wz-cancel', UI.closeAllModals), saveBtn); content.querySelector('.wz-modal-scrollable-content').after(buttonsDiv); overlay.appendChild(content); document.body.appendChild(overlay); UI.setupModalEscape(overlay); setTimeout(() => mainTextEl.focus(), 100); },
-            showBiographyConfigModal: function(textarea) { UI.closeAllModals(); const existingBlock = parseExistingBiographyBlock(textarea.value); const entries = existingBlock ? existingBlock.entries : [{ dateText: '', url: '', description: '' }]; const overlay = document.createElement('div'); overlay.className = 'wz-modal-overlay'; const modalContent = document.createElement('div'); modalContent.className = 'wz-modal-content'; modalContent.innerHTML = `<h3>Configurar Biografía y Enlaces</h3><div class="wz-bio-modal-error" style="display:none;"></div><div class="wz-modal-scrollable-content"><div id="wz-bio-entry-list"></div></div>`; const errorDiv = modalContent.querySelector('.wz-bio-modal-error'); const entryList = modalContent.querySelector('#wz-bio-entry-list'); entries.forEach((entry, i) => entryList.appendChild(createBioEntryElement(entry, i, entryList))); const addBtn = UI.createButton('Añadir Entrada', 'wz-bio-add-entry-btn wz-confirm', () => { if (entryList.children.length < Content.BIO_BLOCK.MAX_ENTRIES) { const newEl = createBioEntryElement(undefined, entryList.children.length, entryList); entryList.appendChild(newEl); newEl.open = true; newEl.scrollIntoView({ behavior: 'smooth' }); } else { errorDiv.textContent = `Máximo ${Content.BIO_BLOCK.MAX_ENTRIES} entradas.`; errorDiv.style.display = 'block'; } }); modalContent.querySelector('.wz-modal-scrollable-content').appendChild(addBtn); const buttonsDiv = document.createElement('div'); buttonsDiv.className = 'wz-modal-buttons'; const saveButton = UI.createButton(existingBlock ? 'Actualizar Bloque' : 'Insertar Bloque', 'wz-confirm', () => {
-                errorDiv.style.display = 'none';
-                let validationFailed = false;
-                const currentEntries = Array.from(entryList.querySelectorAll('.wz-bio-entry')).map((el, index) => {
-                    const dateText = el.querySelector('.wz-bio-date').value.trim();
-                    const description = el.querySelector('.wz-bio-desc').value.trim();
-                    const url = el.querySelector('.wz-bio-url').value.trim();
-                    if (validationFailed) return null;
-                    if ((dateText || description || url)) {
-                        if (!dateText || !description) { errorDiv.textContent = `Error en Entrada ${index + 1}: La fecha y la descripción son obligatorias.`; validationFailed = true; }
-                        else if (!isValidBioDate(dateText)) { errorDiv.textContent = `Error en Entrada ${index + 1}: El formato de la fecha es incorrecto.`; validationFailed = true; }
-                        if (validationFailed) { errorDiv.style.display = 'block'; el.open = true; return null; }
-                    }
-                    return { dateText, url, description };
-                });
-                if (validationFailed) return;
-                const validEntries = currentEntries.filter(e => e && e.dateText && e.description);
-                if (validEntries.length === 0) { if (existingBlock) { UI.showModal("¿Eliminar bloque de biografía vacío?", "confirm", confirmed => { if (confirmed) { textarea.value = textarea.value.substring(0, existingBlock.startIndex) + textarea.value.substring(existingBlock.endIndex); UI.closeAllModals(); } }, true); } return; }
-                let bioContent = Content.BIO_BLOCK.HEADER;
-                validEntries.forEach(entry => {
-                    const prefix = getBioEntryPrefix(entry.dateText);
-                    let lineContent = entry.url ? `[${entry.dateText}](${entry.url})` : entry.dateText;
-                    if (entry.description) {
-                        let desc = entry.description; if (!/[.!?]$/.test(desc)) desc += '.';
-                        lineContent += ` ${desc}`;
-                    }
-                    bioContent += `\n* ${prefix}${lineContent}`;
-                });
-                if (existingBlock) { textarea.value = textarea.value.substring(0, existingBlock.startIndex) + bioContent + textarea.value.substring(existingBlock.endIndex); }
-                else { const { textToInsert, cursorPosition } = ensureProperSpacing(textarea.value, bioContent, 'end'); textarea.value = textToInsert; textarea.selectionStart = textarea.selectionEnd = cursorPosition; }
+            showBiographyConfigModal: function(textarea) {
                 UI.closeAllModals();
-            });
-            buttonsDiv.append(UI.createButton('Cancelar', 'wz-cancel', UI.closeAllModals), saveButton); modalContent.appendChild(buttonsDiv); overlay.appendChild(modalContent); document.body.appendChild(overlay); UI.setupModalEscape(overlay); },
+                const existingBlock = parseExistingBiographyBlock(textarea.value);
+                const entries = existingBlock ? (existingBlock.entries.length > 0 ? existingBlock.entries : [{ dateText: '', url: '', description: '' }]) : [{ dateText: '', url: '', description: '' }];
+                const overlay = document.createElement('div'); overlay.className = 'wz-modal-overlay';
+                const modalContent = document.createElement('div'); modalContent.className = 'wz-modal-content';
+                modalContent.innerHTML = `<h3>Configurar Biografía y Enlaces</h3><div class="wz-bio-modal-error" style="display:none;"></div><div class="wz-modal-scrollable-content"><div id="wz-bio-entry-list"></div></div>`;
+                const errorDiv = modalContent.querySelector('.wz-bio-modal-error');
+                const entryList = modalContent.querySelector('#wz-bio-entry-list');
+                entries.forEach((entry, i) => entryList.appendChild(createBioEntryElement(entry, i, entryList)));
+                const addBtn = UI.createButton('Añadir Entrada', 'wz-bio-add-entry-btn wz-confirm', () => { if (entryList.children.length < Content.BIO_BLOCK.MAX_ENTRIES) { const newEl = createBioEntryElement(undefined, entryList.children.length, entryList); entryList.appendChild(newEl); newEl.open = true; newEl.scrollIntoView({ behavior: 'smooth' }); } else { errorDiv.textContent = `Máximo ${Content.BIO_BLOCK.MAX_ENTRIES} entradas.`; errorDiv.style.display = 'block'; } });
+                modalContent.querySelector('.wz-modal-scrollable-content').appendChild(addBtn);
+                const buttonsDiv = document.createElement('div'); buttonsDiv.className = 'wz-modal-buttons';
+                const saveButton = UI.createButton(existingBlock ? 'Actualizar Bloque' : 'Insertar Bloque', 'wz-confirm', () => {
+                    errorDiv.style.display = 'none';
+                    let validationFailed = false;
+                    const currentEntries = Array.from(entryList.querySelectorAll('.wz-bio-entry')).map((el, index) => {
+                        const dateText = el.querySelector('.wz-bio-date').value.trim();
+                        const description = el.querySelector('.wz-bio-desc').value.trim();
+                        const url = el.querySelector('.wz-bio-url').value.trim();
+                        if (validationFailed) return null;
+                        if ((dateText || description || url)) {
+                            if (!dateText || !description) { errorDiv.textContent = `Error en Entrada ${index + 1}: La fecha y la descripción son obligatorias.`; validationFailed = true; }
+                            else if (!isValidBioDate(dateText)) { errorDiv.textContent = `Error en Entrada ${index + 1}: Formato de fecha inválido. Use 'DD de MES de AAAA', 'MES de AAAA' o 'AAAA'.`; validationFailed = true; }
+                            if (validationFailed) { errorDiv.style.display = 'block'; el.open = true; return null; }
+                        }
+                        return { dateText, url, description };
+                    });
+                    if (validationFailed) return;
+                    const validEntries = currentEntries.filter(e => e && e.dateText && e.description);
+                    if (validEntries.length === 0) { if (existingBlock) { UI.showModal("¿Eliminar bloque de biografía vacío?", "confirm", confirmed => { if (confirmed) { textarea.value = textarea.value.substring(0, existingBlock.startIndex) + textarea.value.substring(existingBlock.endIndex); UI.closeAllModals(); } }, true); } return; }
+                    let bioContent = Content.BIO_BLOCK.HEADER;
+                    validEntries.forEach(entry => {
+                        const prefix = getBioEntryPrefix(entry.dateText);
+                        let lineContent = entry.url ? `[${entry.dateText}](${entry.url})` : entry.dateText;
+                        if (entry.description) {
+                            let desc = entry.description; if (!/[.!?]$/.test(desc)) desc += '.';
+                            lineContent += ` ${desc}`;
+                        }
+                        bioContent += `\n* ${prefix}${lineContent}`;
+                    });
+                    if (existingBlock) { textarea.value = textarea.value.substring(0, existingBlock.startIndex) + bioContent + textarea.value.substring(existingBlock.endIndex); }
+                    else { const { textToInsert, cursorPosition } = ensureProperSpacing(textarea.value, bioContent, 'end'); textarea.value = textToInsert; textarea.selectionStart = textarea.selectionEnd = cursorPosition; }
+                    UI.closeAllModals();
+                });
+                buttonsDiv.append(UI.createButton('Cancelar', 'wz-cancel', UI.closeAllModals), saveButton);
+                modalContent.appendChild(buttonsDiv);
+                overlay.appendChild(modalContent);
+                document.body.appendChild(overlay);
+                UI.setupModalEscape(overlay);
+            },
             applyForumDiscussionFormatting: function(textarea) { const titleInputElement = document.getElementById('reply-title'); if (!titleInputElement) { UI.showModal("Error: Campo de título #reply-title no encontrado.", 'alert'); return; } let postTitle = titleInputElement.value.trim(); if (!postTitle) { UI.showModal("Error: El título del post no puede estar vacío.", 'alert'); return; } const cleanedPostTitleForDisplay = postTitle.replace(/:[a-zA-Z0-9\_+-]+:/g, '').trim(); if (!cleanedPostTitleForDisplay) { UI.showModal("Error: Título (sin emojis) no puede estar vacío.", 'alert'); return; } const newGeneratedParams = { ...generateBodyContentAndTitleParams(cleanedPostTitleForDisplay), cleanedPostTitleForDisplay }; const forumBlockRegex = new RegExp(FORUM_BLOCK_REGEX_STR, 'm'); const existingBlockMatch = textarea.value.match(forumBlockRegex); if (!existingBlockMatch) { const fullBlock = generateFullForumBlock(newGeneratedParams.bodyContentText, newGeneratedParams.urlEncodedTitleForNewTopic); const { textToInsert: finalContent, cursorPosition } = ensureProperSpacing(textarea.value, fullBlock, 'end', null); textarea.value = finalContent; textarea.selectionStart = textarea.selectionEnd = cursorPosition; textarea.focus(); textarea.dispatchEvent(new Event('input', { bubbles: true, cancelable: true })); } else { const existingBlockText = existingBlockMatch[0]; const existingBlockInfo = { text: existingBlockText, startIndex: existingBlockMatch.index, endIndex: existingBlockMatch.index + existingBlockText.length }; const bodyMatch = existingBlockText.match(/pagina de (\[.*?\]\(.*?\))/); const newTopicMatch = existingBlockText.match(/title=WAZO%20-%20([^&"]+)/); const currentParams = { bodyContent: (bodyMatch && bodyMatch[1]) || '', urlEncodedTitle: (newTopicMatch && newTopicMatch[1]) || '' }; if (currentParams.bodyContent === newGeneratedParams.bodyContentText && currentParams.urlEncodedTitle === newGeneratedParams.urlEncodedTitleForNewTopic) { UI.showModal("El bloque 'Foro de discusión' ya está actualizado.", 'alert'); } else { showForumUpdateConfirmModal(textarea, existingBlockInfo, newGeneratedParams, currentParams); } } },
             showFaqConfigModal: function(textarea) { UI.closeAllModals(); const existingBlock = parseExistingFaqBlock(textarea.value); const entries = existingBlock ? existingBlock.entries : [{ question: '', answer: '' }]; const overlay = document.createElement('div'); overlay.className = 'wz-modal-overlay'; const modalContent = document.createElement('div'); modalContent.className = 'wz-modal-content'; modalContent.innerHTML = `<h3>Configurar Preguntas Frecuentes (FAQs)</h3><div class="wz-faq-modal-error" style="display:none;"></div><div class="wz-modal-scrollable-content"><div id="wz-faq-entry-list"></div></div>`; const errorDiv = modalContent.querySelector('.wz-faq-modal-error'); const entryListContainer = modalContent.querySelector('#wz-faq-entry-list'); entries.forEach((entry, index) => entryListContainer.appendChild(createFaqEntryElement(entry, index, entryListContainer))); const addBtn = UI.createButton('Añadir FAQ', 'wz-faq-add-entry-btn wz-confirm', () => { const newFaq = createFaqEntryElement(undefined, entryListContainer.children.length, entryListContainer); entryListContainer.appendChild(newFaq); newFaq.open = true; newFaq.querySelector('.wz-faq-question').focus(); }); modalContent.querySelector('.wz-modal-scrollable-content').appendChild(addBtn); const buttonsDiv = document.createElement('div'); buttonsDiv.className = 'wz-modal-buttons'; const saveButton = UI.createButton(existingBlock ? 'Actualizar Bloque' : 'Insertar Bloque', 'wz-confirm', () => { const faqEntries = Array.from(entryListContainer.querySelectorAll('.wz-faq-entry')).map(d => ({ question: d.querySelector('.wz-faq-question').value.trim(), answer: d.querySelector('.wz-faq-answer').value.trim() })).filter(e => e.question && e.answer); if (faqEntries.length === 0) { if (existingBlock) { UI.showModal("No hay FAQs. ¿Eliminar bloque existente?", "confirm", c => { if (c) { textarea.value = textarea.value.substring(0, existingBlock.startIndex) + textarea.value.substring(existingBlock.endIndex); UI.closeAllModals(); } }, true); } else { errorDiv.textContent = "No hay entradas para guardar."; errorDiv.style.display = 'block'; } return; } let faqContent = faqEntries.map(e => `**🔹 ${e.question}**\n\n${e.answer}`).join('\n\n'); let finalBlock = `---\n\n${Content.FAQ_BLOCK.HEADER}\n\n${faqContent}\n\n---`; if (existingBlock) { textarea.value = textarea.value.substring(0, existingBlock.startIndex) + finalBlock + textarea.value.substring(existingBlock.endIndex); } else { const { textToInsert, cursorPosition } = ensureProperSpacing(textarea.value, finalBlock, 'end'); textarea.value = textToInsert; textarea.selectionStart = textarea.selectionEnd = cursorPosition; } textarea.focus(); UI.closeAllModals(); }); buttonsDiv.append(UI.createButton('Cancelar', 'wz-cancel', UI.closeAllModals), saveButton); modalContent.appendChild(buttonsDiv); overlay.appendChild(modalContent); document.body.appendChild(overlay); UI.setupModalEscape(overlay); }
         };
     })();
 
     if (window.WazeopediaBlocks) { console.warn('Wazeopedia Blocks Library está siendo cargada de nuevo.'); }
-    else { window.WazeopediaBlocks = WazeopediaBlocks; console.log('Wazeopedia Blocks Library 6.4.2 loaded.'); }
+    else { window.WazeopediaBlocks = WazeopediaBlocks; console.log('Wazeopedia Blocks Library 6.4.3 loaded.'); }
 })();

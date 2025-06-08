@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Blocks Library
 // @namespace    http://tampermonkey.net/
-// @version      7.0.1
+// @version      7.0.2
 // @description  Biblioteca de lógica para bloques de contenido de Wazeopedia (Título, Bio, FAQ, etc.).
 // @author       Annthizze
 // @require      https://update.greasyfork.org/scripts/538610/Wazeopedia%20Core%20UI%20Library.js
@@ -14,7 +14,7 @@
     if (window.WazeopediaBlocks) return;
     if (typeof window.WazeopediaUI === 'undefined' || typeof window.WazeopediaContent === 'undefined') { return; }
 
-    const WazeopediaBlocks = (function() {
+    window.WazeopediaBlocks = (function() {
         const UI = window.WazeopediaUI;
         const Content = window.WazeopediaContent;
         const TITLE_STATUS_OPTIONS = Content.TITLE_BLOCK.STATUS_OPTIONS;
@@ -23,7 +23,8 @@
         const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'].join('|');
         const dateRegexDayMonthYear = new RegExp(`^((3[01]|[12][0-9]|0?[1-9]) de (${MONTHS_ES}) de (\\d{4}))`, 'i');
         const dateRegexMonthYear = new RegExp(`^((?:${MONTHS_ES}) de (\\d{4}))`, 'i');
-        const dateRegexYear = /^(\d{4})/;
+        const dateRegexYear = /^(\d{4})$/;
+
         function isValidBioDate(dateText) { const text = dateText.trim(); return dateRegexDayMonthYear.test(text) || dateRegexMonthYear.test(text) || /^\d{4}$/.test(text); }
         function getBioEntryPrefix(dateText) { const text = (dateText || "").trim().toLowerCase(); if (dateRegexDayMonthYear.test(text)) return "El "; if (dateRegexMonthYear.test(text)) return "En "; if (/^\d{4}$/.test(text)) return "En el año "; return ""; }
         function parseExistingBiographyBlock(editorText) { const blockStartIndex = editorText.indexOf(Content.BIO_BLOCK.HEADER); if (blockStartIndex === -1) return null; const contentStartIndex = blockStartIndex + Content.BIO_BLOCK.HEADER.length; const nextBlockRegex = /(?:\n\n---|# \[wzh=[12]\]|Foro de discusión:)/; const nextBlockMatch = editorText.substring(contentStartIndex).match(nextBlockRegex); const endIndex = nextBlockMatch ? contentStartIndex + nextBlockMatch.index : editorText.length; const blockContent = editorText.substring(contentStartIndex, endIndex).trim(); const entries = []; if (blockContent) { blockContent.split('\n').forEach(line => { if (!line.startsWith('* ')) return; let core = line.substring(2).trim(); const prefixMatch = core.match(/^(?:El |En el año |En )/); if (prefixMatch) { core = core.substring(prefixMatch[0].length); } const linkMatch = core.match(/^\[([^\]]+)\]\(([^)]+)\)\s*(.*)/); if (linkMatch) { entries.push({ dateText: linkMatch[1], url: linkMatch[2], description: linkMatch[3].replace(/\.$/, '') }); } else { let dateText = ''; let description = ''; const dmyMatch = core.match(dateRegexDayMonthYear); const myMatch = core.match(dateRegexMonthYear); const yMatch = core.match(dateRegexYear); let foundMatch = null; if (dmyMatch && core.startsWith(dmyMatch[0])) { foundMatch = dmyMatch[0]; } else if (myMatch && core.startsWith(myMatch[0])) { foundMatch = myMatch[0]; } else if (yMatch && core.startsWith(yMatch[0])) { foundMatch = yMatch[0]; } if (foundMatch) { dateText = foundMatch; description = core.substring(foundMatch.length).trim(); } else { dateText = core; description = ''; } entries.push({ dateText, url: '', description: description.replace(/\.$/, '') }); } }); } return { entries, startIndex: blockStartIndex, endIndex }; }
@@ -45,7 +46,7 @@ ${Content.FORUM_BLOCK.LINK_TEXT_TEMPLATE.replace('{{NEW_TOPIC_URL}}', newTopicUr
             showFaqConfigModal: function(textarea) { UI.closeAllModals(); const existingBlock = parseExistingFaqBlock(textarea.value); const entries = existingBlock ? existingBlock.entries : [{ question: '', answer: '' }]; const overlay = document.createElement('div'); overlay.className = 'wz-modal-overlay'; const modalContent = document.createElement('div'); modalContent.className = 'wz-modal-content'; modalContent.innerHTML = `<h3>Configurar Preguntas Frecuentes (FAQs)</h3><div class="wz-faq-modal-error" style="display:none;"></div><div class="wz-modal-scrollable-content"><div id="wz-faq-entry-list"></div></div>`; const errorDiv = modalContent.querySelector('.wz-faq-modal-error'); const entryListContainer = modalContent.querySelector('#wz-faq-entry-list'); entries.forEach((entry, index) => entryListContainer.appendChild(createFaqEntryElement(entry, index, entryListContainer))); const addBtn = UI.createButton('Añadir FAQ', 'wz-faq-add-entry-btn wz-confirm', () => { const newFaq = createFaqEntryElement(undefined, entryListContainer.children.length, entryListContainer); entryListContainer.appendChild(newFaq); newFaq.open = true; newFaq.querySelector('.wz-faq-question').focus(); }); modalContent.querySelector('.wz-modal-scrollable-content').appendChild(addBtn); const buttonsDiv = document.createElement('div'); buttonsDiv.className = 'wz-modal-buttons'; const saveButton = UI.createButton(existingBlock ? 'Actualizar Bloque' : 'Insertar Bloque', 'wz-confirm', () => { const faqEntries = Array.from(entryListContainer.querySelectorAll('.wz-faq-entry')).map(d => ({ question: d.querySelector('.wz-faq-question').value.trim(), answer: d.querySelector('.wz-faq-answer').value.trim() })).filter(e => e.question && e.answer); if (faqEntries.length === 0) { if (existingBlock) { UI.showModal("No hay FAQs. ¿Eliminar bloque existente?", "confirm", c => { if (c) { textarea.value = textarea.value.substring(0, existingBlock.startIndex) + textarea.value.substring(existingBlock.endIndex); UI.closeAllModals(); } }, true); } else { errorDiv.textContent = "No hay entradas para guardar."; errorDiv.style.display = 'block'; } return; } let faqContent = faqEntries.map(e => `**🔹 ${e.question}**\n\n${e.answer}`).join('\n\n'); let finalBlock = `---\n\n${Content.FAQ_BLOCK.HEADER}\n\n${faqContent}\n\n---`; if (existingBlock) { textarea.value = textarea.value.substring(0, existingBlock.startIndex) + finalBlock + textarea.value.substring(existingBlock.endIndex); } else { const { textToInsert, cursorPosition } = ensureProperSpacing(textarea.value, finalBlock, 'end'); textarea.value = textToInsert; textarea.selectionStart = textarea.selectionEnd = cursorPosition; } textarea.focus(); UI.closeAllModals(); }); buttonsDiv.append(UI.createButton('Cancelar', 'wz-cancel', UI.closeAllModals), saveButton); modalContent.appendChild(buttonsDiv); overlay.appendChild(modalContent); document.body.appendChild(overlay); UI.setupModalEscape(overlay); }
         };
     })();
-
+    
     window.WazeopediaBlocks = WazeopediaBlocks;
-    console.log('Wazeopedia Blocks Library 7.0.1 loaded.');
+    console.log('Wazeopedia Blocks Library 7.0.2 loaded.');
 })();

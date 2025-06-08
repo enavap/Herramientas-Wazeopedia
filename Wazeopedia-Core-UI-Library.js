@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Core UI Library
 // @namespace    http://tampermonkey.net/
-// @version      7.0.1
+// @version      7.0.2
 // @description  Biblioteca de componentes de UI (modales, botones, estilos) para las herramientas de Wazeopedia.
 // @author       Annthizze
 // @grant        GM_addStyle
@@ -12,7 +12,7 @@
 (function() {
     if (window.WazeopediaUI) return;
 
-    const WazeopediaUI = (function() {
+    window.WazeopediaUI = (function() {
         const i18n = { es: { yes: 'Sí', no: 'No', accept: 'Aceptar', cancel: 'Cancelar', modalLabel: 'Mensaje emergente' }, en: { yes: 'Yes', no: 'No', accept: 'OK', cancel: 'Cancel', modalLabel: 'Popup message' } };
         let currentLang = 'es';
         function setLanguage(lang) { if (i18n[lang]) currentLang = lang; }
@@ -39,59 +39,9 @@
                 .wz-dropdown-content button:hover { background-color: #e9e9e9; }
                 .wz-dropdown-content hr { margin: 4px 8px; border-color: #ddd; border-style: solid; border-width: 1px 0 0 0; }
                 .wz-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-                .wz-modal-content { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); min-width: 400px; max-width: 700px; text-align: left; max-height: 85vh; display: flex; flex-direction: column; }
-                .wz-modal-content h3 { margin-top: 0; margin-bottom: 15px; text-align: center; color: #333; }
-                .wz-modal-content p { margin-bottom: 15px; font-size: 1em; color: #333; }
-                .wz-modal-content label { display: block; margin-bottom: 5px; font-weight: bold; color: #444; }
-                .wz-modal-content input[type="text"], .wz-modal-content textarea, .wz-modal-content select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; font-size: 1em; box-sizing: border-box; }
-                .wz-modal-content textarea { min-height: 60px; }
-                .wz-modal-content .wz-checkbox-group { margin-bottom: 10px; display: flex; align-items: center; }
-                .wz-modal-content .wz-checkbox-group input[type="checkbox"] { margin-right: 8px; }
-                .wz-modal-content .wz-hidden-section { display: none; }
-                .wz-modal-scrollable-content { overflow-y: auto; flex-grow: 1; padding-right: 10px; }
-                .wz-modal-buttons { text-align: right; margin-top: 20px; padding-top:10px; border-top: 1px solid #eee;}
-                .wz-modal-buttons button { padding: 8px 15px; margin-left: 10px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; font-size: 0.9em; }
-                .wz-modal-buttons button.wz-confirm { background-color: #4CAF50; color: white; border-color: #4CAF50; }
-                .wz-modal-buttons button.wz-cancel { background-color: #f44336; color: white; border-color: #f44336; }
-                .wz-toc-guide-modal { position: fixed; top: 20px; right: 20px; width: 450px; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.25); z-index: 2100; display: flex; flex-direction: column; max-height: 90vh; }
-                .wz-toc-guide-modal select { width: 100%; margin-bottom: 10px; padding: 8px; }
-                #wz-toc-outline-display { background-color: #f4f4f4; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; flex-grow: 1; overflow-y: auto; }
-                .wz-toc-item { padding: 4px 8px; border-radius: 3px; cursor: pointer; white-space: pre; }
-                .wz-toc-item:hover { background-color: #d4edff; color: #004085; }
-                #wz-toc-copy-feedback { color: green; font-style: italic; display: inline-block; margin-right: auto; }
-                .wz-bio-entry details, .wz-faq-entry details { border: 1px solid #eee; border-radius: 4px; margin-bottom: 10px; }
-                .wz-bio-entry summary, .wz-faq-entry summary { padding: 10px; background-color: #f9f9f9; cursor: pointer; font-weight: bold; border-radius: 3px 3px 0 0; color: #555; }
-                .wz-bio-entry summary:hover, .wz-faq-entry summary:hover { background-color: #efefef; }
-                .wz-bio-entry details[open] summary, .wz-faq-entry details[open] summary { background-color: #e0e0e0; }
-                .wz-bio-entry .wz-bio-entry-content, .wz-faq-entry .wz-faq-entry-content { padding: 10px; border-top: 1px solid #eee; }
-                .wz-bio-entry .wz-bio-remove-btn, .wz-faq-entry .wz-faq-remove-btn { background-color: #ff6b6b; color:white; border:none; padding: 5px 10px; border-radius:3px; cursor:pointer; float:right; margin-left:10px; }
-                .wz-bio-add-entry-btn, .wz-faq-add-entry-btn { display:block; margin: 10px auto 0; padding: 8px 15px; }
-                .wz-bio-modal-error, .wz-title-modal-error, .wz-faq-modal-error { color: #D32F2F; font-size: 0.9em; text-align: center; margin-bottom: 10px; padding: 5px; border: 1px solid #ffcdd2; background-color: #ffebee; border-radius: 4px; }
-                .wz-bio-preview-label, .wz-faq-preview-label { font-weight: bold; margin-top:10px; margin-bottom:3px; font-size:0.9em; color: #444;}
-                .wz-bio-entry-preview, .wz-faq-entry-preview { margin-top: 5px; padding: 8px; background-color: #f0f0f0; color: #333; border: 1px dashed #ccc; border-radius: 4px; font-size: 0.9em; white-space: pre-line; }
-                .wz-bio-entry-preview ul { margin: 0; padding-left: 20px; }
-                .wz-bio-entry-preview a, .wz-faq-entry-preview a { color: blue; text-decoration: underline; cursor: help; }
-                .wz-dark-mode .wz-modal-content, .wz-dark-mode .wz-toc-guide-modal { background-color: #2b2b2b; color: #e0e0e0; border: 1px solid #555; }
-                .wz-dark-mode .wz-modal-content h3, .wz-dark-mode .wz-modal-content p, .wz-dark-mode .wz-modal-content label { color: #e0e0e0; }
-                .wz-dark-mode .wz-modal-content input[type="text"], .wz-dark-mode .wz-modal-content textarea, .wz-dark-mode .wz-modal-content select, .wz-dark-mode .wz-toc-guide-modal select { background-color: #272727; color: #e0e0e0; border: 1px solid #555; }
-                .wz-dark-mode .wz-modal-content input[type="text"]:focus, .wz-dark-mode .wz-modal-content textarea:focus, .wz-dark-mode .wz-modal-content select:focus { border-color: #007bff; box-shadow: 0 0 3px #007bff; }
-                .wz-dark-mode .wz-modal-buttons { border-top-color: #444; }
-                .wz-dark-mode .wz-modal-buttons button.wz-confirm { background-color: #007bff; border-color: #007bff; }
-                .wz-dark-mode .wz-modal-buttons button.wz-cancel { background-color: #555; border-color: #555; color: #e0e0e0; }
-                .wz-dark-mode .wz-dropdown-content { background-color: #3a3a3a; border-color: #555; }
-                .wz-dark-mode .wz-dropdown-content button { color: #e0e0e0; }
-                .wz-dark-mode .wz-dropdown-content button:hover { background-color: #4a4a4a; }
-                .wz-dark-mode #wz-toc-outline-display { background-color: #3a3a3a; color: #e0e0e0; border-color: #555; }
-                .wz-dark-mode .wz-toc-item:hover { background-color: #007bff; color: white; }
-                .wz-dark-mode #wz-toc-copy-feedback { color: #28a745; }
-                .wz-dark-mode .wz-bio-entry details, .wz-dark-mode .wz-faq-entry details { border-color: #444; }
-                .wz-dark-mode .wz-bio-entry summary, .wz-dark-mode .wz-faq-entry summary { background-color: #3a3a3a; color: #e0e0e0; }
-                .wz-dark-mode .wz-bio-entry summary:hover, .wz-dark-mode .wz-faq-entry summary:hover { background-color: #4a4a4a; }
-                .wz-dark-mode .wz-bio-entry details[open] summary, .wz-dark-mode .wz-faq-entry details[open] summary { background-color: #007bff; color: white; }
-                .wz-dark-mode .wz-bio-entry .wz-bio-entry-content, .wz-dark-mode .wz-faq-entry .wz-faq-entry-content { border-top-color: #444; }
-                .wz-dark-mode .wz-bio-entry-preview, .wz-dark-mode .wz-faq-entry-preview { background-color: #3a3a3a; color: #e0e0e0; border-color: #555; }
-                .wz-dark-mode .wz-bio-entry-preview a, .wz-dark-mode .wz-faq-entry-preview a { color: #61afef; }
-                .wz-dark-mode .wz-bio-modal-error, .wz-dark-mode .wz-title-modal-error, .wz-dark-mode .wz-faq-modal-error { background-color: #5d3434; color: #ffcdd2; border-color: #8b4444; }
+                .wz-modal-content { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); min-width: 400px; max-width: 700px; text-align: left; max-height: 85vh; display: flex; flex-direction: column; } .wz-modal-content h3 { margin-top: 0; margin-bottom: 15px; text-align: center; color: #333; } .wz-modal-content p { margin-bottom: 15px; font-size: 1em; color: #333; } .wz-modal-content label { display: block; margin-bottom: 5px; font-weight: bold; color: #444; } .wz-modal-content input[type="text"], .wz-modal-content textarea, .wz-modal-content select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; font-size: 1em; box-sizing: border-box; } .wz-modal-content textarea { min-height: 60px; } .wz-modal-content .wz-checkbox-group { margin-bottom: 10px; display: flex; align-items: center; } .wz-modal-content .wz-checkbox-group input[type="checkbox"] { margin-right: 8px; } .wz-modal-content .wz-hidden-section { display: none; } .wz-modal-scrollable-content { overflow-y: auto; flex-grow: 1; padding-right: 10px; } .wz-modal-buttons { text-align: right; margin-top: 20px; padding-top:10px; border-top: 1px solid #eee;} .wz-modal-buttons button { padding: 8px 15px; margin-left: 10px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; font-size: 0.9em; } .wz-modal-buttons button.wz-confirm { background-color: #4CAF50; color: white; border-color: #4CAF50; } .wz-modal-buttons button.wz-cancel { background-color: #f44336; color: white; border-color: #f44336; }
+                .wz-toc-guide-modal { position: fixed; top: 20px; right: 20px; width: 450px; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.25); z-index: 2100; display: flex; flex-direction: column; max-height: 90vh; } .wz-toc-guide-modal select { width: 100%; margin-bottom: 10px; padding: 8px; } #wz-toc-outline-display { background-color: #f4f4f4; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; flex-grow: 1; overflow-y: auto; } .wz-toc-item { padding: 4px 8px; border-radius: 3px; cursor: pointer; white-space: pre; } .wz-toc-item:hover { background-color: #d4edff; color: #004085; } #wz-toc-copy-feedback { color: green; font-style: italic; display: inline-block; margin-right: auto; } .wz-bio-entry details, .wz-faq-entry details { border: 1px solid #eee; border-radius: 4px; margin-bottom: 10px; } .wz-bio-entry summary, .wz-faq-entry summary { padding: 10px; background-color: #f9f9f9; cursor: pointer; font-weight: bold; border-radius: 3px 3px 0 0; color: #555; } .wz-bio-entry summary:hover, .wz-faq-entry summary:hover { background-color: #efefef; } .wz-bio-entry details[open] summary, .wz-faq-entry details[open] summary { background-color: #e0e0e0; } .wz-bio-entry .wz-bio-entry-content, .wz-faq-entry .wz-faq-entry-content { padding: 10px; border-top: 1px solid #eee; } .wz-bio-entry .wz-bio-remove-btn, .wz-faq-entry .wz-faq-remove-btn { background-color: #ff6b6b; color:white; border:none; padding: 5px 10px; border-radius:3px; cursor:pointer; float:right; margin-left:10px; } .wz-bio-add-entry-btn, .wz-faq-add-entry-btn { display:block; margin: 10px auto 0; padding: 8px 15px; } .wz-bio-modal-error, .wz-title-modal-error, .wz-faq-modal-error { color: #D32F2F; font-size: 0.9em; text-align: center; margin-bottom: 10px; padding: 5px; border: 1px solid #ffcdd2; background-color: #ffebee; border-radius: 4px; } .wz-bio-preview-label, .wz-faq-preview-label { font-weight: bold; margin-top:10px; margin-bottom:3px; font-size:0.9em; color: #444;} .wz-bio-entry-preview, .wz-faq-entry-preview { margin-top: 5px; padding: 8px; background-color: #f0f0f0; color: #333; border: 1px dashed #ccc; border-radius: 4px; font-size: 0.9em; white-space: pre-line; } .wz-bio-entry-preview ul { margin: 0; padding-left: 20px; } .wz-bio-entry-preview a, .wz-faq-entry-preview a { color: blue; text-decoration: underline; cursor: help; }
+                .wz-dark-mode .wz-modal-content, .wz-dark-mode .wz-toc-guide-modal { background-color: #2b2b2b; color: #e0e0e0; border: 1px solid #555; } .wz-dark-mode .wz-modal-content h3, .wz-dark-mode .wz-modal-content p, .wz-dark-mode .wz-modal-content label { color: #e0e0e0; } .wz-dark-mode .wz-modal-content input[type="text"], .wz-dark-mode .wz-modal-content textarea, .wz-dark-mode .wz-modal-content select, .wz-dark-mode .wz-toc-guide-modal select { background-color: #272727; color: #e0e0e0; border: 1px solid #555; } .wz-dark-mode .wz-modal-content input[type="text"]:focus, .wz-dark-mode .wz-modal-content textarea:focus, .wz-dark-mode .wz-modal-content select:focus { border-color: #007bff; box-shadow: 0 0 3px #007bff; } .wz-dark-mode .wz-modal-buttons { border-top-color: #444; } .wz-dark-mode .wz-modal-buttons button.wz-confirm { background-color: #007bff; border-color: #007bff; } .wz-dark-mode .wz-modal-buttons button.wz-cancel { background-color: #555; border-color: #555; color: #e0e0e0; } .wz-dark-mode .wz-dropdown-content { background-color: #3a3a3a; border-color: #555; } .wz-dark-mode .wz-dropdown-content button { color: #e0e0e0; } .wz-dark-mode .wz-dropdown-content button:hover { background-color: #4a4a4a; } .wz-dark-mode #wz-toc-outline-display { background-color: #3a3a3a; color: #e0e0e0; border-color: #555; } .wz-dark-mode .wz-toc-item:hover { background-color: #007bff; color: white; } .wz-dark-mode #wz-toc-copy-feedback { color: #28a745; } .wz-dark-mode .wz-bio-entry details, .wz-dark-mode .wz-faq-entry details { border-color: #444; } .wz-dark-mode .wz-bio-entry summary, .wz-dark-mode .wz-faq-entry summary { background-color: #3a3a3a; color: #e0e0e0; } .wz-dark-mode .wz-bio-entry summary:hover, .wz-dark-mode .wz-faq-entry summary:hover { background-color: #4a4a4a; } .wz-dark-mode .wz-bio-entry details[open] summary, .wz-dark-mode .wz-faq-entry details[open] summary { background-color: #007bff; color: white; } .wz-dark-mode .wz-bio-entry .wz-bio-entry-content, .wz-dark-mode .wz-faq-entry .wz-faq-entry-content { border-top-color: #444; } .wz-dark-mode .wz-bio-entry-preview, .wz-dark-mode .wz-faq-entry-preview { background-color: #3a3a3a; color: #e0e0e0; border-color: #555; } .wz-dark-mode .wz-bio-entry-preview a, .wz-dark-mode .wz-faq-entry-preview a { color: #61afef; } .wz-dark-mode .wz-bio-modal-error, .wz-dark-mode .wz-title-modal-error, .wz-dark-mode .wz-faq-modal-error { background-color: #5d3434; color: #ffcdd2; border-color: #8b4444; }
             `;
             if (typeof GM_addStyle === 'function') { GM_addStyle(css); } else { let style = document.createElement('style'); style.textContent = css; document.head.appendChild(style); }
         }

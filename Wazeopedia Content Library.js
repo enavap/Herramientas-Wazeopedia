@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Content Library
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Biblioteca de contenido (textos, plantillas, URLs) para las herramientas de Wazeopedia.
 // @author       Annthizze
 // @license      MIT
@@ -53,8 +53,10 @@
         }
     };
 
-    // Exponer el objeto de contenido globalmente
-    window.WazeopediaContent = WazeopediaContent;
-    console.log('Wazeopedia Content Library 1.0.0 loaded.');
-
+    if (window.WazeopediaContent) {
+        console.warn('Wazeopedia Content Library está siendo cargada de nuevo.');
+    } else {
+        window.WazeopediaContent = WazeopediaContent;
+        console.log('Wazeopedia Content Library 1.0.1 loaded.');
+    }
 })();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Blocks Library
 // @namespace    http://tampermonkey.net/
-// @version      7.0.0
+// @version      7.0.1
 // @description  Biblioteca de lógica para bloques de contenido de Wazeopedia (Título, Bio, FAQ, etc.).
 // @author       Annthizze
 // @require      https://update.greasyfork.org/scripts/538610/Wazeopedia%20Core%20UI%20Library.js
@@ -12,10 +12,7 @@
 'use strict';
 (function() {
     if (window.WazeopediaBlocks) return;
-
-    if (typeof window.WazeopediaUI === 'undefined' || typeof window.WazeopediaContent === 'undefined') {
-        return; // Esperar a que el inicializador principal se encargue
-    }
+    if (typeof window.WazeopediaUI === 'undefined' || typeof window.WazeopediaContent === 'undefined') { return; }
 
     const WazeopediaBlocks = (function() {
         const UI = window.WazeopediaUI;
@@ -37,7 +34,7 @@
     })();
     
     window.WazeopediaBlocks = WazeopediaBlocks;
-    console.log('Wazeopedia Blocks Library 7.0.0 loaded.');
+    console.log('Wazeopedia Blocks Library 7.0.1 loaded.');
     if (typeof window.wazeopediaToolInitializer === 'function') {
         window.wazeopediaToolInitializer();
     }

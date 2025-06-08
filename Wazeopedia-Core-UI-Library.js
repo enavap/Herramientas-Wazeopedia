@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Core UI Library
 // @namespace    http://tampermonkey.net/
-// @version      7.0.0
+// @version      7.0.1
 // @description  Biblioteca de componentes de UI (modales, botones, estilos) para las herramientas de Wazeopedia.
 // @author       Annthizze
 // @grant        GM_addStyle
@@ -10,14 +10,13 @@
 
 'use strict';
 (function() {
-    if (window.WazeopediaUI) return; // Prevenir doble ejecución
+    if (window.WazeopediaUI) return;
 
     const WazeopediaUI = (function() {
         const i18n = { es: { yes: 'Sí', no: 'No', accept: 'Aceptar', cancel: 'Cancelar', modalLabel: 'Mensaje emergente' }, en: { yes: 'Yes', no: 'No', accept: 'OK', cancel: 'Cancel', modalLabel: 'Popup message' } };
         let currentLang = 'es';
         function setLanguage(lang) { if (i18n[lang]) currentLang = lang; }
         function t(key) { return i18n[currentLang][key] || key; }
-        
         function loadStyles() {
             const css = `
                 .wz-main-toolbar { background-color: #f9f9f9; padding: 5px 8px; border: 1px solid #ddd; border-bottom: none; border-radius: 5px 5px 0 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
@@ -115,6 +114,6 @@
         loadStyles();
         return publicApi;
     })();
-    if (window.WazeopediaUI) { console.warn('Wazeopedia UI Library está siendo cargada de nuevo.'); }
-    else { window.WazeopediaUI = WazeopediaUI; console.log('Wazeopedia Core UI Library 7.0.0 loaded.'); }
+    window.WazeopediaUI = WazeopediaUI;
+    console.log('Wazeopedia Core UI Library 7.0.1 loaded.');
 })();

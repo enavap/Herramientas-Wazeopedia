@@ -62,7 +62,7 @@
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
         addCustomButtons();
         applyTheme();
-        console.log(`Herramientas Wazeopedia ${GM_info.script.version} initialized successfully.`);
+        console.log(`Herramientas Wazeopedia v${GM_info.script.version} initialized successfully.`);
     }
 
     (function checkDependencies() {

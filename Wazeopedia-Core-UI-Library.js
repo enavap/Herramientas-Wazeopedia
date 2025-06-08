@@ -71,5 +71,5 @@
         loadStyles();
         return publicApi;
     })();
-    console.log('Wazeopedia Core UI Library v9.0.0 loaded.');
+    console.log('Wazeopedia Core UI Library v9.0.1 loaded.');
 })();

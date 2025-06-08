@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Content Library
 // @namespace    http://tampermonkey.net/
-// @version      2.1.0.0.9
+// @version      2.1.0.5.9
 // @description  Biblioteca de contenido (textos, plantillas, URLs) para las herramientas de Wazeopedia.
 // @author       Annthizze
 // @license      MIT

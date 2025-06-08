@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wazeopedia Core UI Library
 // @namespace    http://tampermonkey.net/
-// @version      8.0.1.8
+// @version      8.0.1.9
 // @description  Biblioteca de componentes de UI (modales, botones, estilos) para las herramientas de Wazeopedia.
 // @author       Annthizze
 // @grant        GM_addStyle
@@ -67,5 +67,5 @@
         loadStyles();
         return publicApi;
     })();
-    console.log(`Wazeopedia Core UI Library v${GM_info.script.version} loaded.`);
+    console.log(`Wazeopedia Core UI Library buena loaded.`);
 })();

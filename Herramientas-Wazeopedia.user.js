@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      6.3.0
+// @version      6.4.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
@@ -103,5 +103,10 @@
         console.log(`Herramientas Wazeopedia ${GM_info.script.version} initialized successfully.`);
     }
 
-    initializeTools();
+    // Usamos un pequeño retraso para asegurar que el DOM está listo, especialmente en SPA como Discourse
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeTools);
+    } else {
+        initializeTools();
+    }
 })();

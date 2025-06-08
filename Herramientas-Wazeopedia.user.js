@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Herramientas Wazeopedia
 // @namespace    http://tampermonkey.net/
-// @version      6.4.0
+// @version      6.5.0
 // @description  Añade botones y herramientas para la edición en Wazeopedia desde el foro de Waze (Discourse).
 // @author       Annthizze
 // @match        https://www.waze.com/discuss/*
@@ -59,31 +59,63 @@
                 ]
             }
         ];
-
+        
         function addCustomButtons() {
-            const editorToolbar = document.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar, .editor-toolbar');
-            if (!editorToolbar || editorToolbar.querySelector('.wz-button-container')) return;
+            const editorContainer = document.querySelector('.d-editor-container');
+            if (!editorContainer || editorContainer.querySelector('.wz-main-toolbar')) {
+                return;
+            }
+
+            const discourseToolbar = editorContainer.querySelector('div.d-editor-button-bar, div.discourse-markdown-toolbar');
+            if (!discourseToolbar) return;
+
+            const mainToolbar = document.createElement('div');
+            mainToolbar.className = 'wz-main-toolbar';
+            
+            discourseToolbar.parentNode.insertBefore(mainToolbar, discourseToolbar);
+
+            const textarea = editorContainer.querySelector('textarea.d-editor-input, #reply-control textarea');
+            if (!textarea) return;
+            
             const buttonBarContainer = document.createElement('div');
             buttonBarContainer.className = 'wz-button-container';
-            editorToolbar.appendChild(buttonBarContainer);
-            const textarea = document.querySelector('textarea.d-editor-input, #reply-control textarea, .composer-container textarea');
-            if (!textarea) return;
+            mainToolbar.appendChild(buttonBarContainer);
 
             buttonConfigs.forEach(config => {
                 if (config.isDropdown) {
-                    const wrapper = document.createElement('div'); wrapper.className = 'wz-dropdown';
-                    const content = document.createElement('div'); content.className = 'wz-dropdown-content';
-                    const btn = UI.createButton(config.text, 'wz-custom-button btn wz-dropdown-toggle', e => { e.stopPropagation(); UI.toggleDropdown(content); });
-                    btn.id = config.id; btn.title = config.title;
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'wz-dropdown';
+                    const content = document.createElement('div');
+                    content.className = 'wz-dropdown-content';
+                    const btn = UI.createButton(config.text, 'wz-custom-button btn wz-dropdown-toggle', e => {
+                        e.stopPropagation();
+                        UI.toggleDropdown(content);
+                    });
+                    btn.id = config.id;
+                    btn.title = config.title;
+
                     config.dropdownItems.forEach(item => {
-                        if (item.isSeparator) { content.appendChild(document.createElement('hr')); }
-                        else { const ddBtn = UI.createButton(item.text, '', e => { e.stopPropagation(); if (typeof item.action === 'function') item.action(textarea); UI.closeAllDropdowns(); }); ddBtn.title = item.title || item.text; content.appendChild(ddBtn); }
+                        if (item.isSeparator) {
+                            content.appendChild(document.createElement('hr'));
+                        } else {
+                            const ddBtn = UI.createButton(item.text, '', e => {
+                                e.stopPropagation();
+                                if (typeof item.action === 'function') item.action(textarea);
+                                UI.closeAllDropdowns();
+                            });
+                            ddBtn.title = item.title || item.text;
+                            content.appendChild(ddBtn);
+                        }
                     });
                     wrapper.append(btn, content);
                     buttonBarContainer.appendChild(wrapper);
                 } else {
-                    const btn = UI.createButton(config.text, 'wz-custom-button btn', e => { e.preventDefault(); if (typeof config.action === 'function') config.action(textarea); });
-                    btn.id = config.id; btn.title = config.title;
+                    const btn = UI.createButton(config.text, 'wz-custom-button btn', e => {
+                        e.preventDefault();
+                        if (typeof config.action === 'function') config.action(textarea);
+                    });
+                    btn.id = config.id;
+                    btn.title = config.title;
                     buttonBarContainer.appendChild(btn);
                 }
             });
@@ -97,16 +129,16 @@
         const editorObserver = new MutationObserver(addCustomButtons);
         editorObserver.observe(document.body, { childList: true, subtree: true });
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-        addCustomButtons();
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', addCustomButtons);
+        } else {
+            addCustomButtons();
+        }
         applyTheme();
 
         console.log(`Herramientas Wazeopedia ${GM_info.script.version} initialized successfully.`);
     }
 
-    // Usamos un pequeño retraso para asegurar que el DOM está listo, especialmente en SPA como Discourse
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeTools);
-    } else {
-        initializeTools();
-    }
+    initializeTools();
 })();
